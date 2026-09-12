@@ -33,6 +33,9 @@ transcript
 .DS_Store
 Thumbs.db
 
+# cursor stuff
+.cursor
+
 # Backups
 *~
 *.bak
