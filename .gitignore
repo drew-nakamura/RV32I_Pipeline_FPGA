@@ -1,0 +1,41 @@
+# Vivado-generated directories
+*.cache/
+*.gen/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+
+# Vivado temporary files
+.Xil/
+*.jou
+*.log
+*.str
+*.pb
+*.wdb
+*.wcfg
+webtalk*.xml
+webtalk*.jou
+
+# Generated FPGA outputs
+*.bit
+*.bin
+*.ltx
+
+# Simulation outputs
+work/
+xsim.dir/
+transcript
+*.vcd
+
+# Editor and OS files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# cursor stuff
+.cursor
+
+# Backups
+*~
+*.bak
