@@ -60,7 +60,7 @@ module OTTER_Wrapper(
     );
 
    Interconnect Interconnect(
-        .address(IOBUS_addr)
+        .address(IOBUS_addr),
         .WE(IOBUS_WE),
         .RDEN(IOUBS_RDEN),
         .CPU_DATA(IOBUS_out),

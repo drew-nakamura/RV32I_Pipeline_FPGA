@@ -14,7 +14,8 @@ module HazardUnit(
     input logic jal_i,
     input logic jalr_i,
     input logic [1:0] PC_SEL,
-    output logic  Hazard_FLUSH_ID_EX, Hazard_FLUSH_EX_MEM;
+    output logic Hazard_FLUSH_ID_EX, 
+    output logic Hazard_FLUSH_EX_MEM
     );
     //Lowkey a little confusing, but these signals will be sitting and executed
     // on the posedge, so it will prevent its update not remove the current stuff.

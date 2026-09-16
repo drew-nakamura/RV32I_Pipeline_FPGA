@@ -15,7 +15,7 @@
 //     .RDEN(),
 //     .WE()
 //     );
-import CPU_TOP_pkg::*;
+import CPU_pkg::*;
 
 
 module CPU_TOP(

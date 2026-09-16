@@ -40,5 +40,5 @@ module Interconnect(
         end else begin
             
         end
-        default: 
     end
+endmodule

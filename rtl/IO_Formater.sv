@@ -27,13 +27,15 @@ module IO_Formater (
     output logic [31:0] IO_write_data, //YO THIS FOR MEM STAGE
     output logic [31:0] IO_read_data //YO THIS FOR WB STAGE
     );
-
-    assign [13:0] wordAddr2 = ADDR[15:2];
-    assign [1:0] byteOffset = ADDR[1:0];
+    logic [13:0] wordAddr;
+    logic [1:0] byteOffset;
+    
+    assign wordAddr2 = ADDR[15:2];
+    assign byteOffset = ADDR[1:0];
 
     always_comb begin
         if (memWE == 1) begin     // write enable and valid address space
-            case({mem_SIZE,byteOffset})
+            case({mem_SIZE, byteOffset})
                 4'b0000: IO_write_data[7:0]   = DATA_IN[7:0];     // sb at byte offsets
                 4'b0001: IO_write_data[15:8]  = DATA_IN[7:0];
                 4'b0010: IO_write_data[23:16] = DATA_IN[7:0];

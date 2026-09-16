@@ -1,6 +1,5 @@
 `timescale 1ns / 1ps
 
-
 // PC_Decoder (
 //     .br_lt(),
 //     .br_eq(),
@@ -11,6 +10,8 @@
 //     .func3(),
 //     .PC_SEL()
 // )
+
+import CPU_pkg::*;
 
 module PC_Decoder(
     input logic br_lt,
@@ -24,7 +25,7 @@ module PC_Decoder(
     );
     
     always_comb begin
-        unique case([{branch_i, jal_i, jalr_i}])
+        unique case({branch_i, jal_i, jalr_i})
             3'b000: PC_SEL = pc_PC4;
             3'b100: begin
                 case(func3)
@@ -40,5 +41,6 @@ module PC_Decoder(
             3'b010: PC_SEL = pc_JAL;
             3'b001: PC_SEL = pc_JALR;
         default: PC_SEL = 'X;
+        endcase
     end
-
+endmodule
