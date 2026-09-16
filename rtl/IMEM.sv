@@ -28,21 +28,23 @@ module IMEM(
     input logic [31:0] PC,
     output logic [31:0] instruction,
     output logic [31:0] PC_USED
-)
-logic [11:0] wordAddress;
-(* rom_style="{distributed | block}" *)
-(* ram_decomp = "power " *)
-logic [31:0] instruction_memory[0:8191];
+    );
 
-//Read from loaded imem file!!
-initial begin
-    $readmemh("imem.mem", memory, 0, 8191);
-end
+    logic [12:0] wordAddress;
+    (* rom_style="{distributed | block}" *)
+    (* ram_decomp = "power " *)
+    logic [31:0] instruction_memory[0:8191];
 
-//no non word read
-assign wordAddress ={address[9:2], 2'b0};
+    //Read from loaded imem file!!
+    initial begin
+        $readmemh("imem.mem", instruction_memory, 0, 8191);
+    end
 
-always_ff @(posedge clk) begin
-    instruction = instruction_memory[wordAddress];
-    PC_USED = PC;
-end
+    //no non word read
+    assign wordAddress ={PC[12:2]};
+
+    always_ff @(posedge clk) begin
+        instruction <= instruction_memory[wordAddress];
+        PC_USED <= PC;
+    end
+endmodule

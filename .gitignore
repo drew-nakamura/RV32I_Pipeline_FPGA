@@ -36,6 +36,9 @@ Thumbs.db
 # cursor stuff
 .cursor
 
+# Media and Misc
+PHOTOS/
+
 # Backups
 *~
 *.bak

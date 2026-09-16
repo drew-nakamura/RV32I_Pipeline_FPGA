@@ -29,7 +29,12 @@ module Jump_Branch_Address_Generator(
     output logic [31:0] jalr, branch, jal
     );
     
-    assign jalr = I_Type + rs1;
+    assign jalr = (I_Type + rs1) & 32'hFFFFFFFE; 
+        //previously had the mask, but while reading the ISA it states
+        //"Clearing the least-significant bit when calculating the 
+        //JALR target address both simplifies the hardware slightly 
+        //and allows the low bit of function pointers to be used to 
+        //store auxiliary information" so T added it.
     assign branch = PC + B_Type;
     assign jal = PC + J_Type;
 endmodule

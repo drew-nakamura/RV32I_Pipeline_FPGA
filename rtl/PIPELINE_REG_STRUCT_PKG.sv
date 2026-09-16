@@ -1,11 +1,9 @@
 `timescale 1ns / 1ps
-
-//import PIPE_LINE_REG_pkg::*;
 package CPU_pkg;
 
 //======ENUMS=======
 typedef enum logic [5:0] {
-    LUI, AUPIC, JAL, JALR, LB, LH, LW, LBU,
+    LUI, AUIPC, JAL, JALR, LB, LH, LW, LBU,
     LHU, ADDI, SLTI, SLTIU, ORI, XORI, ANDI, 
     SLLI, SRLI, SRAI, BEQ, BNE, BLT, BGE, BLTU,
     BGEU, SB, SH, SW, ADD, SUB, SLL, SLT, SLTU,
@@ -63,117 +61,129 @@ typedef enum logic [3:0] {
 //======Structures====
 
 typedef struct packed {
-    logic [31:0] PC,
-    logic [2:0] func3,
-    logic srcA_SEL,
-    logic RF_WE,
-    logic memWE,
-    logic memRDEN,
-    logic branch_i,
-    logic jal_i,
-    logic jalr_i,
-    logic mem_sign,
-    logic [1:0] mem_size,
-    logic [1:0] srcB_SEL,
-    logic [1:0] RF_SEL,
-    logic [4:0] reg_write_addr,
-    logic [3:0] ALU_FUN,
-    logic [31:0] U_Type,
-    logic [31:0] I_Type,
-    logic [31:0] S_Type,
-    logic [31:0] B_Type,
-    logic [31:0] J_Type,
-    instruction_e instruction;
-    STAGE_e stage;
+    logic [31:0] PC;
+    logic [2:0] func3;
+    logic srcA_SEL;
+    logic RF_WE;
+    logic memWE;
+    logic memRDEN;
+    logic branch_i;
+    logic jal_i;
+    logic jalr_i;
+    logic mem_sign;
+    logic [1:0] mem_size;
+    logic [1:0] srcB_SEL;
+    logic [1:0] RF_SEL;
+    logic [4:0] reg_write_addr;
+    logic [3:0] ALU_FUN;
+    logic [31:0] U_Type;
+    logic [31:0] I_Type;
+    logic [31:0] S_Type;
+    logic [31:0] B_Type;
+    logic [31:0] J_Type;
+    logic [4:0] rs1_addr;
+    logic [4:0] rs2_addr;
+    logic [31:0] rs1;
+    logic [31:0] rs2;
+    instr_name_e instruction;
 } id_ex_t;
 
 typedef struct packed {
-    logic [31:0] PC,
-    logic RF_WE,
-    logic memWE,
-    logic memRDEN,
-    logic mem_sign,
-    logic [1:0] mem_size,
-    loigc [1:0] RF_SEL,
-    logic [4:0] reg_write_addr,
-    logic [31:0] ALU_result,
-    logic [31:0] IO_write_data
+    logic [31:0] PC;
+    logic RF_WE;
+    logic memWE;
+    logic memRDEN;
+    logic mem_sign;
+    logic [1:0] mem_size;
+    logic [1:0] RF_SEL;
+    logic [4:0] reg_write_addr;
+    logic [31:0] ALU_result;
+    logic [31:0] IO_write_data;
+    instr_name_e instruction;
 } ex_mem_t;
 
 typedef struct packed {
-    logic [31:0] PC,
-    logic RF_WE,
-    logic memWE,
-    logic memRDEN,
-    logic mem_sign,
-    logic [1:0] mem_size,
-    loigc [1:0] RF_SEL,
-    logic [4:0] reg_write_addr,
-    logic [31:0] ALU_result
-}
+    logic [31:0] PC;
+    logic RF_WE;
+    logic memWE;
+    logic memRDEN;
+    logic mem_sign;
+    logic [1:0] mem_size;
+    logic [1:0] RF_SEL;
+    logic [4:0] reg_write_addr;
+    logic [31:0] REG_write_data;
+    instr_name_e instruction;
+} mem_wb_t;
 
-//======Functions======
-function automatic instr_name_e decode_instr_name(input logic [31:0] ir);
-    logic [6:0] opcode = ir[6:0];
-    logic [2:0] funct3 = ir[14:12];
-    logic [6:0] funct7 = ir[31:25];
+    //======Functions======
+    function automatic instr_name_e decode_instr_name(input logic [31:0] ir);
+        logic [6:0] opcode = ir[6:0];
+        logic [2:0] funct3 = ir[14:12];
+        logic [6:0] funct7 = ir[31:25];
 
-    case (opcode)
-        7'b0110111: decode_instr_name = LUI;
-        7'b0010111: decode_instr_name = AUIPC;
-        7'b1101111: decode_instr_name = JAL;
-        7'b1100111: decode_instr_name = JALR;
+        case (opcode)
+            7'b0110111: decode_instr_name = LUI;
+            7'b0010111: decode_instr_name = AUIPC;
+            7'b1101111: decode_instr_name = JAL;
+            7'b1100111: decode_instr_name = JALR;
 
-        7'b0000011: case (funct3)
-            3'b000: decode_instr_name = LB;
-            3'b001: decode_instr_name = LH;
-            3'b010: decode_instr_name = LW;
-            3'b100: decode_instr_name = LBU;
-            3'b101: decode_instr_name = LHU;
+            7'b0000011: case (funct3)
+                3'b000: decode_instr_name = LB;
+                3'b001: decode_instr_name = LH;
+                3'b010: decode_instr_name = LW;
+                3'b100: decode_instr_name = LBU;
+                3'b101: decode_instr_name = LHU;
+                default: decode_instr_name = UNKNOWN;
+            endcase
+
+            7'b0010011: case (funct3)
+                3'b000: decode_instr_name = ADDI;
+                3'b010: decode_instr_name = SLTI;
+                3'b011: decode_instr_name = SLTIU;
+                3'b110: decode_instr_name = ORI;
+                3'b100: decode_instr_name = XORI;
+                3'b111: decode_instr_name = ANDI;
+                3'b001: decode_instr_name = SLLI;
+                3'b101: begin
+                    case (funct7)
+                        7'b0000000: decode_instr_name = SRLI;
+                        7'b0100000: decode_instr_name = SRAI;
+                        default:    decode_instr_name = UNKNOWN;
+                    endcase
+                end
+                default: decode_instr_name = UNKNOWN;
+            endcase
+
+            7'b1100011: case (funct3)
+                3'b000: decode_instr_name = BEQ;
+                3'b001: decode_instr_name = BNE;
+                3'b100: decode_instr_name = BLT;
+                3'b101: decode_instr_name = BGE;
+                3'b110: decode_instr_name = BLTU;
+                3'b111: decode_instr_name = BGEU;
+                default: decode_instr_name = UNKNOWN;
+            endcase
+
+            7'b0100011: case (funct3)
+                3'b000: decode_instr_name = SB;
+                3'b001: decode_instr_name = SH;
+                3'b010: decode_instr_name = SW;
+                default: decode_instr_name = UNKNOWN;
+            endcase
+
+            7'b0110011: case (funct3)
+                3'b000: decode_instr_name = (funct7 == 7'b0100000) ? SUB : ADD;
+                3'b001: decode_instr_name = SLL;
+                3'b010: decode_instr_name = SLT;
+                3'b011: decode_instr_name = SLTU;
+                3'b100: decode_instr_name = XOR;
+                3'b101: decode_instr_name = (funct7 == 7'b0100000) ? SRA : SRL;
+                3'b110: decode_instr_name = OR;
+                3'b111: decode_instr_name = AND;
+                default: decode_instr_name = UNKNOWN;
+            endcase
+
             default: decode_instr_name = UNKNOWN;
         endcase
-
-        7'b0010011: case (funct3)
-            3'b000: decode_instr_name = ADDI;
-            3'b010: decode_instr_name = SLTI;
-            3'b011: decode_instr_name = SLTIU;
-            3'b110: decode_instr_name = ORI;
-            3'b100: decode_instr_name = XORI;
-            3'b111: decode_instr_name = ANDI;
-            3'b001: decode_instr_name = SLLI;
-            3'b101: decode_instr_name = (funct7 == 7'b0000000) ? SRLI : SRAI;
-            default: decode_instr_name = UNKNOWN;
-        endcase
-
-        7'b1100011: case (funct3)
-            3'b000: decode_instr_name = BEQ;
-            3'b001: decode_instr_name = BNE;
-            3'b100: decode_instr_name = BLT;
-            3'b101: decode_instr_name = BGE;
-            3'b110: decode_instr_name = BLTU;
-            3'b111: decode_instr_name = BGEU;
-            default: decode_instr_name = UNKNOWN;
-        endcase
-
-        7'b0100011: case (funct3)
-            3'b000: decode_instr_name = SB;
-            3'b001: decode_instr_name = SH;
-            3'b010: decode_instr_name = SW;
-            default: decode_instr_name = UNKNOWN;
-        endcase
-
-        7'b0110011: case (funct3)
-            3'b000: decode_instr_name = (funct7 == 7'b0100000) ? SUB : ADD;
-            3'b001: decode_instr_name = SLL;
-            3'b010: decode_instr_name = SLT;
-            3'b011: decode_instr_name = SLTU;
-            3'b100: decode_instr_name = XOR;
-            3'b101: decode_instr_name = (funct7 == 7'b0100000) ? SRA : SRL;
-            3'b110: decode_instr_name = OR;
-            3'b111: decode_instr_name = AND;
-            default: decode_instr_name = UNKNOWN;
-        endcase
-
-        default: decode_instr_name = UNKNOWN;
-    endcase
-endfunction
+    endfunction
+endpackage

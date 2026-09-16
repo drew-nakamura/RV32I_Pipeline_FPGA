@@ -21,13 +21,13 @@
 
 
 module OTTER_Wrapper(
-   input CLK,
-   input BTNC,
-   input BTNC2,
-   input [15:0] SWITCHES,
+   input logic CLK,
+   input logic BTNC,
+   input logic BTNC2,
+   input logic[15:0] SWITCHES,
    output logic [15:0] LEDS,
-   output [7:0] CATHODES,
-   output [3:0] ANODES
+   output logic [7:0] CATHODES,
+   output logic [3:0] ANODES
    );
        
     // INPUT PORT IDS BASED ON MMIO//////////////////////////////////////////////

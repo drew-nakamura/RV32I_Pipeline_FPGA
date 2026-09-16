@@ -15,13 +15,15 @@
 //     .RDEN(),
 //     .WE()
 //     );
+import CPU_TOP_pkg::*;
+
 
 module CPU_TOP(
     input logic RST,
     input logic CLK,
     input logic [31:0] DATA_IN,
     output logic [2:0] mem_data,
-    output lgoic [31:0] DATA_ADDRESS,
+    output logic [31:0] DATA_ADDRESS,
     output logic [31:0] DATA_OUT,
     output logic RDEN,
     output logic WE
@@ -37,7 +39,6 @@ module CPU_TOP(
 
     //====ENUMS=====
     instr_name_e instruction;
-    stage_e stage;
 
     //===CPU WIRE/BUFFERS===
     logic reset;
@@ -52,46 +53,64 @@ module CPU_TOP(
     //==Reg File Wires===
     logic [31:0] rs1, rs2, write_data;
 
+    //===Control Unit Wires===
+    logic srcA_SEL, RF_WE, memWE, memRDEN, branch_i, jal_i, jalr_i;
+    logic [1:0] srcB_SEL;
+    logic [2:0] RF_SEL;
+    logic [3:0] ALU_FUN;
+
     //===Branch Cond Gen Wires===
     logic br_lt, br_eq, br_ltu;
 
+    //===PC Decoder Wires===
+    logic [1:0] PC_SEL;
+
+    //===Immediate Generator Wires===
+    logic [31:0] U_Type, I_Type, S_Type, B_Type, J_Type;
+
     //===ALU WIRES====
     logic [31:0] srcA, srcB, ALU_out;
+    logic [31:0] srcA_REAL, srcB_REAL;
 
     //===IO_Formater Wires===
-    loigc [31:0] IO_write_data;
+    logic [31:0] IO_write_data;
     logic [31:0] IO_read_data;
+
+    //===HAZARD WIRES===
+    logic STALL_EX, STALL_ID, STALL_IF;
+    logic Hazard_FLUSH_ID_EX, Hazard_FLUSH_EX_MEM;
+    logic [1:0] srcA_FORWARD_SEL, srcB_FORWARD_SEL;
+
     //========== FETCH ===============================
-    Program_Counter PC(
+    Program_Counter Program_Counter(
         .reset(RST),
-        .PC_SEL(PC_SEL), //Comes from ID stage
-        .PC_PLUS_FOUR(PC_USED + 4),//Comes from ID stage
+        .PC_SEL(PC_SEL), //Comes from EX stage
+        .PC_PLUS_FOUR(id_ex_q.PC + 4),//Comes from EX stage
         .JALR_ADDR(jalr),
         .BRANCH_ADDR(branch),
         .JAL_ADDR(jal),
         .PC(PC)
     );
 
-    IMEM IMEM(
+    IMEM IMEM( //Also lowkey acts like the IF/ID reg, since it's sync read, and the ir is ready by the ned of the posedge
         .CLK(CLK),
         .PC(PC),
         .instruction(ir),
-        .PC_USED(PC_USED)
+        .PC_USED(PC_USED),
+        .STALL_IF(STALL_IF)
     );
 
     //========== DECODE ===============================
     
     assign instruction = decode_instr_name(ir);
-    assign stage = FETCH;
 
-
-    REG_FILE (
+    REG_FILE REG_FILE(
         .CLK(CLK),
         .en(mem_wb_q.RF_WE),      //WB
         .adr1(ir[19:15]),   //ID
         .adr2(ir[24:20]),    //ID
-        .w_adr(mem_wb_q.),   //WB
-        .w_data(),  //WB
+        .w_adr(mem_wb_q.reg_write_addr),   //WB
+        .w_data(write_data),  //WB
         .rs1(id_ex_d.rs1),  //ID
         .rs2(id_ex_d.rs2)   //ID
     );
@@ -112,7 +131,7 @@ module CPU_TOP(
         .ALU_FUN(ALU_FUN)
     );
 
-    Immediate_Generator (
+    Immediate_Generator Immediate_Generator(
         .imm(ir[31:7]),
         .U_TYPE(U_Type),
         .I_TYPE(I_Type),
@@ -142,13 +161,22 @@ module CPU_TOP(
         id_ex_d.S_Type = S_Type;
         id_ex_d.B_Type = B_Type;
         id_ex_d.J_Type = J_Type;
+        id_ex_d.rs1_addr = ir[19:15];
+        id_ex_d.rs2_addr = ir[24:20];
         id_ex_d.instruction = instruction;
-        id_ex_d.stage = DECODE;
     end
 
     always_ff @(posedge clk) begin
         if (reset) begin
             id_ex_q <= '0;
+        end
+        else if (STALL_ID) begin
+            id_ex_q <= id_ex_q;
+        end
+        else if (STALL_IF) begin
+            //If we dont stall EX but IF stalls, this shouldnt really get anything.
+            //This should really do anything bad, but if some weird stuff happens its probably from this
+            id_ex_q <= '0; //
         end
         else begin
             id_ex_q <= id_ex_d;
@@ -164,7 +192,7 @@ module CPU_TOP(
         .br_ltu(br_ltu)
     );
 
-    PC_Decoder (
+    PC_Decoder PC_Decoder(
         .br_lt(br_lt),
         .br_eq(br_eq),
         .br_ltu(br_ltu),
@@ -176,11 +204,11 @@ module CPU_TOP(
     );
 
     Jump_Branch_Address_Generator (
-        .PC(PC),
+        .PC(id_ex_q.PC),
         .J_Type(id_ex_q.J_Type),
         .B_Type(id_ex_q.B_Type),
         .I_Type(id_ex_q.I_Type),
-        .rs1(id_ex_q.rs1),
+        .rs1(srcA_REAL), //GET THE FORWARDED RS1 
         .jalr(jalr),
         .branch(branch),
         .jal(jal)
@@ -193,6 +221,15 @@ module CPU_TOP(
         .OUT(srcA)
     );
 
+    FOUR_TO_ONE_MUX Forwarding_srcA_MUX(
+       .A(srcA),
+       .B(ex_mem_q.ALU_result),
+       .C(mem_wb_q.REG_write_data),
+       .D('X),
+       .SEL(srcA_FORWARD_SEL),
+       .OUT(srcA_REAL)
+    );
+
     FOUR_TO_ONE_MUX srcB_MUX(
         .A(id_ex_q.rs2),
         .B(id_ex_q.I_Type),
@@ -202,9 +239,18 @@ module CPU_TOP(
         .OUT(srcB)
    );
 
+   FOUR_TO_ONE_MUX Forwarding_srcB_MUX(
+       .A(srcB),
+       .B(ex_mem_q.ALU_result),
+       .C(mem_wb_q.REG_write_data),
+       .D('X),
+       .SEL(srcB_FORWARD_SEL),
+       .OUT(srcB_REAL)
+    );
+
    ALU Arithmatic_Logical_Unit(
-        .srcA(srcA),
-        .srcB(srcB),
+        .srcA(srcA_REAL),
+        .srcB(srcB_REAL),
         .alu_func(id_ex_q.ALU_FUN),
         .result(ALU_result)
    );
@@ -216,27 +262,32 @@ module CPU_TOP(
         ex_mem_d.reg_write_addr = id_ex_q.reg_write_addr;
         ex_mem_d.ALU_result = ALU_result;
         //FUCK IT LETS DO IT, data is caught by the psoedge to read/write dmem, as data should be ready by the ned of EX
-        mem_data = [{id_ex_q.mem_size, id_ex_q.mem_sign}]
+        mem_data = {id_ex_q.mem_size, id_ex_q.mem_sign};
         DATA_ADDRESS = ALU_result;
         DATA_OUT = id_ex_q.rs2;
         RDEN = id_ex_q.memRDEN;
         WE = id_ex_q.memWE;
-    
+        ex_mem_d.instruction = id_ex_q.instruction;
     end
 
-    always_ff @(posedge clk) begin
-        if (reset) begin
+    always_ff @(posedge CLK) begin
+        if (RST) begin
             ex_mem_q <= '0;
         end
-        else begin
+        else if (STALL_EX) begin
+            //Like the earlier one, if EX stalls then mem shouldnt really update, 
+            // and i dont really wanna add a valid bit for this so we just gonna 
+            // make it 0.
+            ex_mem_q <= '0;
+        end else begin
             ex_mem_q <= ex_mem_d;
         end
     end
    //===Memory Stage====
    //Simialr to the IMEM, vaddress, and signals will be waiting due to
-   // the BRAM sync read, so this stage is just a buffer in here.
+    //the BRAM sync read, so this stage is just a buffer in here.
     //Nothing combinational realy happens in this stage, 
-    //  The values are settled in EX/MEm and will read/wrtie on this posedge
+    //The values are settled in EX/MEm and will read/wrtie on this posedge
   
 
     always_comb begin
@@ -248,10 +299,12 @@ module CPU_TOP(
         mem_wb_d.mem_size = ex_mem_q.mem_size;
         mem_wb_d.RF_SEL = ex_mem_q.RF_SEL;
         mem_wb_d.reg_write_addr = ex_mem_q.reg_write_addr;
+        mem_wb_d.instruction = ex_mem_q.instruction;
+        mem_wb_d.REG_write_data = write_data;
     end
-    assign
-    always_ff @(posedge clk) begin
-        if (reset) begin
+
+    always_ff @(posedge CLK) begin
+        if (RST) begin
             mem_wb_q <= '0;
         end
         else begin
@@ -270,3 +323,31 @@ module CPU_TOP(
         .SEL(ex_mem_q.RF_SEL),
         .OUT(write_data)
     );
+
+    //=====================Hazard Units========================
+    Forwarding_Unit Forwarding_Unit(
+        .EX_RS1_READ_ADDR(id_ex_q.rs1_addr),
+        .EX_RS2_READ_ADDR(id_ex_q.rs2_addr),
+        .MEM_REG_WRITE_ADDR(ex_mem_q.reg_write_addr),
+        .WB_REG_WRITE_ADDR(mem_wb_q.reg_write_addr),
+        .MEM_REG_WE(ex_mem_q.RF_WE),
+        .MEM_DMEM_RDEN(ex_mem_q.memRDEN),
+        .WB_DMEM_RDEN(mem_wb_q.memRDEN),
+        .WB_REG_WE(mem_wb_q.RF_WE),
+        .STALL_IF(STALL_IF),
+        .STALL_ID(STALL_ID),
+        .STALL_EX(STALL_EX),
+        .srcA_FORWARD_SEL(srcA_FORWARD_SEL),
+        .srcB_FORWARD_SEL(srcB_FORWARD_SEL)
+    );
+
+    HazardUnit Hazard_Unit(
+        .branch_i(branch_i),
+        .jal_i(jal_i),
+        .jalr_i(jalr_i),
+        .PC_SEL(PC_SEL),
+        .Hazard_FLUSH_ID_EX(Hazard_FLUSH_ID_EX),
+        .Hazard_FLUSH_EX_MEM(Hazard_FLUSH_EX_MEM)
+    );
+
+endmodule

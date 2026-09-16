@@ -57,15 +57,24 @@ module Control_Unit_Decoder(
             memWE = 0;
             RF_WE = 1'b1;
         end
-
+    
         7'b1101111://==J-Type -> JAL====================
         begin
             srcA_SEL = srca_U_TYPE;
             srcB_SEL = srcb_PC;
             RF_SEL = WB_PC4;
+            jal_i = 1'b1;
 
             memRDEN = 0;
             memWE = 0;
+            RF_WE = 1'b1;
+        end
+
+        7'b1100111://==I-Type -> JALR====================
+        begin
+            //Address is calculated in the Jump_Branch_Address_Generator
+            RF_SEL = WB_PC4;
+            jalr_i = 1'b1;
             RF_WE = 1'b1;
         end
 
@@ -75,7 +84,6 @@ module Control_Unit_Decoder(
             srcA_SEL =  srca_rs1;
             srcB_SEL = srcb_I_TYPE;
             RF_SEL = WB_MEM; //Write back stage will load from mem
-            
             memRDEN = 1;
             RF_WE = 1'b1;
         end
@@ -129,15 +137,7 @@ module Control_Unit_Decoder(
 
         7'b1100011: //B-Type
         begin
-            case(func3)
-                3'b000: begin PC_SEL = br_eq  ? pc_BRANCH : pc_PC4; end // BEQ
-                3'b001: begin PC_SEL = ~br_eq ? pc_BRANCH : pc_PC4; end // BNE
-                3'b100: begin PC_SEL = br_lt  ? pc_BRANCH : pc_PC4; end // BLT
-                3'b101: begin PC_SEL = ~br_lt ? pc_BRANCH : pc_PC4; end // BGE
-                3'b110: begin PC_SEL = br_ltu ? pc_BRANCH : pc_PC4; end // BLTU
-                3'b111: begin PC_SEL = ~br_ltu? pc_BRANCH : pc_PC4; end // BGEU
-                default: PC_SEL = pc_PC4;
-            endcase
+            branch_i = 1'b1;
         end
         default: begin
                 ALU_FUN = 'X;

@@ -19,7 +19,7 @@ module PC_Decoder(
     input logic branch_i,
     input logic jal_i,
     input logic jalr_i,
-    input logic func3,
+    input logic [2:0]func3,
     output logic [1:0] PC_SEL
     );
     

@@ -6,7 +6,8 @@
 // Date:      9/12/2026
 //
 // Role in system:
-//   The ALU is the only arithmetic element in the EX stage. Control_Unit_Decoder
+//   The ALU is the only arithmetic element(excluding the adders for address cal
+//   calculations and immediate generation) in the EX stage. Control_Unit_Decoder
 //   picks ALU_FUN in DECODE, it rides the ID/EX register into EX, and srcA/srcB
 //   arrive from the srcA 2:1 and srcB 4:1 muxes. The result fans out to two
 //   very different consumers: the EX/MEM register (writeback data) and the DMEM
@@ -515,11 +516,11 @@ module ALU_tb;
         $finish;
     end
 
-    // Waveforms: uncomment for SimVision, then 'simvision waves.shm &'
-    // initial begin
-    //     $shm_open("waves.shm");
-    //     $shm_probe("AS");      // A = all signals, S = include sub-scopes
-    // end
+    //Waveforms: uncomment for SimVision, then 'simvision waves.shm &'
+    initial begin
+        $shm_open("waves.shm");
+        $shm_probe("AS");      // A = all signals, S = include sub-scopes
+    end
 
 endmodule
 
