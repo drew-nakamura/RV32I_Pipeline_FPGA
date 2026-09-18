@@ -1,14 +1,5 @@
 `timescale 1ns / 1ps
 
-
-// HazardUnit (
-//     .branch_i(branch_i),
-//     .jal_i(jal_i),
-//     .jalr_i(jalr_i),
-//     .PC_SEL(PC_SEL),
-//     .Hazard_FLUSH_ID_EX(Hazard_FLUSH_ID_EX),
-//     .Hazard_FLUSH_EX_MEM(Hazard_FLUSH_EX_MEM)
-// )
 module HazardUnit(
     input logic branch_i,
     input logic jal_i,

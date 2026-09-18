@@ -23,9 +23,11 @@
 //     );
 
 module IMEM(
+    parameter string MEM_FILE = "imem.mem",
     input logic CLK,
     input logic [31:0] PC,
-    output logic [31:0] instruction
+    output logic [31:0] instruction,
+    output logic [31:0] PC_USED
     );
 
     logic [12:0] wordAddress;
@@ -35,13 +37,14 @@ module IMEM(
 
     //Read from loaded imem file!!
     initial begin
-        $readmemh("imem.mem", instruction_memory, 0, 8191);
+        $readmemh(MEM_FILE, instruction_memory);
     end
 
     //no non word read
-    assign wordAddress ={PC[12:2]};
+    assign wordAddress ={PC[14:2]};
 
     always_ff @(posedge CLK) begin
         instruction <= instruction_memory[wordAddress];
+        PC_USED <= PC;
     end
 endmodule

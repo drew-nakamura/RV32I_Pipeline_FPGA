@@ -30,6 +30,7 @@ module TWO_TO_ONE_MUX(
     case(SEL)
     1'b0:  OUT = A;
     1'b1:  OUT = B;
+    default: OUT = 'X;
     endcase
     end
         

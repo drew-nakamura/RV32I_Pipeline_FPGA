@@ -1,11 +1,4 @@
 `timescale 1ns / 1ps
-
-
-// Decsion:
-// 9/2/2026: Remove the IF/ID reg, it only holds IR and P, instead, since the
-//            IMEM is suynch and clocked, we can hold pc there to align the pc read and the ir.
-//
-
 // CPU_TOP (
 //     .RST(),
 //     .CLK(),
@@ -25,8 +18,8 @@ module CPU_TOP(
     output logic [2:0] mem_data,
     output logic [31:0] DATA_ADDRESS,
     output logic [31:0] DATA_OUT,
-    output logic RDEN,
-    output logic WE
+    output logic IOBUS_RDEN,
+    output logic IOBUS_WE
     );
 
     //===Structs====
@@ -60,6 +53,8 @@ module CPU_TOP(
     logic [1:0] srcB_SEL;
     logic [1:0] RF_SEL;
     logic [3:0] ALU_FUN;
+    logic rs1_used;
+    logic rs2_used;
 
     //===Branch Cond Gen Wires===
     logic br_lt, br_eq, br_ltu;
@@ -76,10 +71,6 @@ module CPU_TOP(
     logic [31:0] srcA_REAL, srcB_REAL;
     logic [31:0] ALU_result;
 
-    //===IO_Formater Wires===
-    logic [31:0] IO_write_data;
-    logic [31:0] IO_read_data;
-
     //===HAZARD WIRES===
     logic FORW_FLUSH_EX_MEM, FORW_STALL_ID_EX, FORW_STALL_IF_ID;
     logic Hazard_FLUSH_IF_ID, Hazard_FLUSH_ID_EX;
@@ -89,7 +80,7 @@ module CPU_TOP(
     Program_Counter Program_Counter(
         .reset(RST),
         .PC_SEL(PC_SEL), //Comes from EX stage
-        .PC_PLUS_FOUR(if_id_q.PC + 4),//Comes from EX stage
+        .PC_PLUS_FOUR(PC_USED + 4),//smacked in from IMEM, as the latch will be the same as the insturciton
         .JALR_ADDR(jalr),
         .BRANCH_ADDR(branch),
         .JAL_ADDR(jal),
@@ -99,12 +90,13 @@ module CPU_TOP(
     IMEM IMEM(
         .CLK(CLK),
         .PC(PC),
-        .instruction(ir)
+        .instruction(ir),
+        .PC_USED(PC_USED)
     );
     assign instruction = decode_instr_name(ir);
 
     always_comb begin
-        if_id_d.PC = PC;
+        if_id_d.PC = PC;// latch will aligh with ir, if PC_USEd is dont then it will be a cycle behind
         if_id_d.ir = ir;
         if_id_d.instruction = instruction;
     end
@@ -148,7 +140,9 @@ module CPU_TOP(
         .jalr_i(jalr_i),
         .srcB_SEL(srcB_SEL),
         .RF_SEL(RF_SEL),
-        .ALU_FUN(ALU_FUN)
+        .ALU_FUN(ALU_FUN),
+        .rs1_used(rs1_used),
+        .rs2_used(rs2_used)
     );
 
     Immediate_Generator Immediate_Generator(
@@ -161,7 +155,7 @@ module CPU_TOP(
     );
 
     always_comb begin
-        id_ex_d.PC = PC_USED;
+        id_ex_d.PC = if_id_q.PC;
         id_ex_d.func3 = ir[14:12];
         id_ex_d.srcA_SEL = srcA_SEL;
         id_ex_d.RF_WE = RF_WE;
@@ -185,6 +179,8 @@ module CPU_TOP(
         id_ex_d.rs2_addr = ir[24:20];
         id_ex_d.rs1 = rs1;
         id_ex_d.rs2 = rs2;
+        id_ex_d.rs1_used = rs1_used;
+        id_ex_d.rs2_used = rs2_used;
         id_ex_d.instruction = instruction;
     end
 
@@ -247,7 +243,7 @@ module CPU_TOP(
        .A(srcA),
        .B(ex_mem_q.ALU_result),
        .C(mem_wb_q.REG_write_data),
-       .D('X),
+       .D('0),
        .SEL(srcA_FORWARD_SEL),
        .OUT(srcA_REAL)
     );
@@ -265,7 +261,7 @@ module CPU_TOP(
        .A(srcB),
        .B(ex_mem_q.ALU_result),
        .C(mem_wb_q.REG_write_data),
-       .D('X),
+       .D('0),
        .SEL(srcB_FORWARD_SEL),
        .OUT(srcB_REAL)
     );
@@ -290,14 +286,14 @@ module CPU_TOP(
         ex_mem_d.memWE = id_ex_q.memWE;
         mem_data = {id_ex_q.mem_size, id_ex_q.mem_sign};
         DATA_ADDRESS = ALU_result;
-        DATA_OUT = id_ex_q.rs2;
-        RDEN = id_ex_q.memRDEN;
-        WE = id_ex_q.memWE;
+        DATA_OUT = srcB_REAL; //Shold only be valid data when rs2 is used... forwarded or not... but defiently could be buggy so!!!!!!!
+        IOBUS_RDEN = id_ex_q.memRDEN;
+        IOBUS_WE = id_ex_q.memWE;
         ex_mem_d.instruction = id_ex_q.instruction;
     end
 
     always_ff @(posedge CLK) begin
-        if (RST || Hazard_FLUSH_EX_MEM) begin
+        if (RST) begin
             ex_mem_q <= '0;
         end
         else if (FORW_FLUSH_EX_MEM) begin
@@ -344,7 +340,7 @@ module CPU_TOP(
     FOUR_TO_ONE_MUX reg_MUX(
         .A(ex_mem_q.PC + 4),
         .B('X),
-        .C(IO_read_data), // should have come back from mem stage
+        .C(DATA_IN), // should have come back from mem stage
         .D(ex_mem_q.ALU_result),
         .SEL(ex_mem_q.RF_SEL),
         .OUT(write_data)
@@ -354,23 +350,30 @@ module CPU_TOP(
     Forwarding_Unit Forwarding_Unit(
         .EX_RS1_READ_ADDR(id_ex_q.rs1_addr),
         .EX_RS2_READ_ADDR(id_ex_q.rs2_addr),
+        .EX_RS1_Used(id_ex_q.rs1_used),
+        .EX_RS2_Used(id_ex_q.rs2_used),
         .MEM_REG_WRITE_ADDR(ex_mem_q.reg_write_addr),
         .WB_REG_WRITE_ADDR(mem_wb_q.reg_write_addr),
         .MEM_REG_WE(ex_mem_q.RF_WE),
         .MEM_DMEM_RDEN(ex_mem_q.memRDEN),
         .WB_DMEM_RDEN(mem_wb_q.memRDEN),
         .WB_REG_WE(mem_wb_q.RF_WE),
-        .FLUSH_EX_MEM(FORW_FLUSH_EX_MEM),
+        .FLUSH_EX_MEM(FORW_FLUSH_EX_MEM),//THis flushes the next write of data, not what is currently in EX/MEM reg
         .STALL_IF_ID(FORW_STALL_IF_ID),
         .STALL_ID_EX(FORW_STALL_ID_EX),
         .srcA_FORWARD_SEL(srcA_FORWARD_SEL),
         .srcB_FORWARD_SEL(srcB_FORWARD_SEL)
     );
+    //If custom insturciton is added, ensure we dont accidently forward/hazard because of rs1 rs2 stuff.
+
+    //And now thinking about the x0 thing, we could literally ignore the latency thing if its written to x0,
+    // and with x0 commonly being used to do nothing or some other sutff, this could portentialy save many
+    // clock cycles. SO note to self to fix this later!
 
     HazardUnit Hazard_Unit(
-        .branch_i(branch_i),
-        .jal_i(jal_i),
-        .jalr_i(jalr_i),
+        .branch_i(id_ex_q.branch_i),
+        .jal_i(id_ex_q.jal_i),
+        .jalr_i(id_ex_q.jalr_i),
         .PC_SEL(PC_SEL),
         .Hazard_FLUSH_IF_ID(Hazard_FLUSH_IF_ID),
         .Hazard_FLUSH_ID_EX(Hazard_FLUSH_ID_EX)

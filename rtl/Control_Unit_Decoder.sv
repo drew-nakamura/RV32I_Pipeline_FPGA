@@ -24,7 +24,8 @@ module Control_Unit_Decoder(
     input logic ir30, //for ADD/SUB & SRL/SRA
     output logic srcA_SEL, RF_WE, memWE, memRDEN, branch_i, jal_i, jalr_i,
     output logic [1:0] srcB_SEL, RF_SEL,
-    output logic [3:0] ALU_FUN
+    output logic [3:0] ALU_FUN,
+    output logic rs1_used, rs2_used
     );
 
     always_comb begin
@@ -38,7 +39,9 @@ module Control_Unit_Decoder(
         memRDEN = 1'b0;
         branch_i = 1'b0;
         jal_i = 1'b0;
-        
+        jalr_i = 1'b0;
+        rs1_used = 1'b0;
+        rs2_used = 1'b0;
         case(opcode)
         7'b0110111://==U-Type -> LUI====================
         begin
@@ -64,9 +67,6 @@ module Control_Unit_Decoder(
             srcB_SEL = srcb_PC;
             RF_SEL = WB_PC4;
             jal_i = 1'b1;
-
-            memRDEN = 0;
-            memWE = 0;
             RF_WE = 1'b1;
         end
 
@@ -76,6 +76,7 @@ module Control_Unit_Decoder(
             RF_SEL = WB_PC4;
             jalr_i = 1'b1;
             RF_WE = 1'b1;
+            rs1_used = 1'b1;
         end
 
         7'b0000011://==I-Type -> LOADS=====================
@@ -86,6 +87,7 @@ module Control_Unit_Decoder(
             RF_SEL = WB_DATA_IN; //Write back stage will load from mem
             memRDEN = 1;
             RF_WE = 1'b1;
+            rs1_used = 1'b1;
         end
         
         7'b0010011://==I-Type -> ALU STUFF=====================
@@ -95,9 +97,8 @@ module Control_Unit_Decoder(
             srcA_SEL =  srca_rs1;
             srcB_SEL = srcb_I_TYPE;
             RF_SEL = WB_ALU;
-
             RF_WE = 1'b1;
-            
+            rs1_used = 1'b1;
             case(func3)
                 3'b000: ALU_FUN = alu_ADD; //ADD
                 3'b010: ALU_FUN = alu_SLT;//SLTI            
@@ -114,6 +115,8 @@ module Control_Unit_Decoder(
         7'b0110011://==R-Type=====================
         begin
             RF_WE = 1'b1;
+            rs1_used = 1'b1;
+            rs2_used = 1'b1;
             //All other defaults work for R type
             RF_SEL = WB_ALU;
             case(func3)
@@ -133,11 +136,15 @@ module Control_Unit_Decoder(
         begin
             srcB_SEL = srcb_S_TYPE;
             memWE = 1'b1;
+            rs2_used = 1'b1;
+            rs1_used = 1'b1;
         end
 
         7'b1100011: //B-Type
         begin
             branch_i = 1'b1;
+            rs1_used = 1'b1;
+            rs2_used = 1'b1;
         end
         default: begin
                 ALU_FUN = 'X;
@@ -150,6 +157,8 @@ module Control_Unit_Decoder(
                 branch_i = 'X;
                 jalr_i = 'X;
                 jal_i = 'X;
+                rs1_used = 'X;
+                rs2_used = 'X;
         end
         endcase
     end

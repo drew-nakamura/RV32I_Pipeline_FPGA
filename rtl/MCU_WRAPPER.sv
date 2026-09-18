@@ -58,14 +58,14 @@ module OTTER_Wrapper(
         .DATA_ADDRESS(IOBUS_addr),
         .DATA_OUT(IOBUS_out),
         .IOBUS_RDEN(IOBUS_RDEN),
-        .WE(IOBUS_WE)
+        .IOBUS_WE(IOBUS_WE)
     );
 
    Interconnect Interconnect(
         .address(IOBUS_addr),
         .WE(IOBUS_WE),
         .CPU_DATA(IOBUS_out),
-        .IO_RDEN(IOBUS_RDEN),
+        .RDEN(IOBUS_RDEN),
         .DMEM_DATA(DMEM_DATA),
         .SWITCHES({16'b0,SWITCHES}),
         .BUTTONS({31'b0, BTNC2}),
@@ -78,8 +78,8 @@ module OTTER_Wrapper(
 
    DMEM DATA_MEMORY(
         .CLK(CLK),
-        .DMEM_WE(DMEM_WE),
-        .DMEM_RDEN(DMEM_RDEN),
+        .WE(DMEM_WE),
+        .RDEN(DMEM_RDEN),
         .address(IOBUS_addr),
         .data_in(IOBUS_out),
         .mem_data(mem_data), //Meta data for half, byte, and word

@@ -25,10 +25,11 @@
 //     .data_out()
 // );
 module DMEM(
+    parameter string MEM_FILE = "dmem.mem",
     input logic CLK,
-    input logic DMEM_WE,
+    input logic WE,
     input logic RDEN,
-    input logic [10:0] address,
+    input logic [31:0] address,
     input logic [31:0] data_in,
     input logic [2:0] mem_data,
     output logic [31:0] data_out
@@ -46,7 +47,7 @@ module DMEM(
 
     //Read from loaded w_ramS file!!
     initial begin
-        $readmemh("ram.mem", memory, 0, 2047);
+        $readmemh(MEM_FILE, memory);
     end
 
     assign mem_size = mem_data[2:1];
@@ -57,7 +58,7 @@ module DMEM(
 
     always_ff @(posedge CLK) begin
         //=====================================WRITE=============
-        if (DMEM_WE) begin     // write enable and valid address space
+        if (WE) begin     // write enable and valid address space
             case({mem_size, byteOffset})
                 4'b0000: memory[wordAddress][7:0]   <= data_in[7:0];     // sb at byte offsets
                 4'b0001: memory[wordAddress][15:8]  <= data_in[7:0];

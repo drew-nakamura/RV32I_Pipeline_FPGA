@@ -91,6 +91,8 @@ typedef struct packed {
     logic [4:0] rs2_addr;
     logic [31:0] rs1;
     logic [31:0] rs2;
+    logic rs1_used;
+    logic rs2_used;
     instr_name_e instruction;
 } id_ex_t;
 
