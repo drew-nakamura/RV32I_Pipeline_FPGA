@@ -45,7 +45,7 @@ module CathodeDriver(
     always_ff @(posedge s_clk_500) begin
         case (r_disp_digit)
             2'b00: begin
-                ANODES= 4'b1110;
+                ANODES <= 4'b1110;
                 case (HEX[3:0])
                     4'b0000: CATHODES <= 8'b10000001; //0
                     4'b0001: CATHODES <= 8'b11001111; //1
@@ -67,7 +67,7 @@ module CathodeDriver(
                 endcase
             end
             2'b01: begin
-                ANODES= 4'b1101;
+                ANODES <= 4'b1101;
                 case (HEX[7:4])
                     4'b0000: CATHODES <= 8'b10000001;
                     4'b0001: CATHODES <= 8'b11001111;
@@ -89,7 +89,7 @@ module CathodeDriver(
                 endcase
             end
             2'b10: begin
-                ANODES= 4'b1011;
+                ANODES <= 4'b1011;
                 case (HEX[11:8])
                     4'b0000: CATHODES <= 8'b10000001;
                     4'b0001: CATHODES <= 8'b11001111;
@@ -111,7 +111,7 @@ module CathodeDriver(
                 endcase
             end
             2'b11: begin
-                ANODES= 4'b0111;
+                ANODES <= 4'b0111;
                 case (HEX[15:12])
                     4'b0000: CATHODES <= 8'b10000001;
                     4'b0001: CATHODES <= 8'b11001111;
@@ -133,15 +133,13 @@ module CathodeDriver(
                 endcase
             end
             default: begin      // digit error turn everything off
-                ANODES = 4'hF;
-                CATHODES = 8'hFF;
-                r_disp_digit = 2'b00;
+                ANODES <= 4'hF;
+                CATHODES <= 8'hFF;
+                r_disp_digit <= 2'b00;
             end
         endcase
         
-        r_disp_digit = r_disp_digit + 1;
+        r_disp_digit <= r_disp_digit + 1;
     end
-
-    
     
 endmodule
