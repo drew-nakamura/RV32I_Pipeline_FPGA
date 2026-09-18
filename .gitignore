@@ -10,6 +10,18 @@
 !sim/**
 !tb/
 !tb/**
+!scripts/
+!scripts/**
+!scripts/filelists/
+!scripts/filelists/**
+!docs/
+!docs/**
+!docs/images/
+!docs/images/**
+!build/
+!build/**
+!sw/
+!sw/**
 
 # Even inside allowed trees, skip generated simulation junk
 work/
