@@ -24,8 +24,10 @@
 //     .mem_data(),
 //     .data_out()
 // );
-module DMEM(
-    parameter string MEM_FILE = "dmem.mem",
+module DMEM #(
+    parameter string MEM_FILE = "dmem.mem"
+    )
+    (
     input logic CLK,
     input logic WE,
     input logic RDEN,

@@ -11,9 +11,6 @@
 // Notes:
 //   - Educational use only
 //   - Not an original architecture design
-// Decsion:
-//  9/2/2026: Will act as the IF/ID register to align PC with ir, and
-//      it sounds liek it wil solve the weird sync timing bugs with PC mod, IF/ID reg, and IMEM.
 //============================================================
 
 // IMEM (
@@ -22,8 +19,10 @@
 //     .instruction()
 //     );
 
-module IMEM(
-    parameter string MEM_FILE = "imem.mem",
+module IMEM #(
+    parameter string MEM_FILE = "imem.mem"
+    )
+    (
     input logic CLK,
     input logic [31:0] PC,
     output logic [31:0] instruction,
