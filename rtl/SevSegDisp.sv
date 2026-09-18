@@ -19,11 +19,12 @@
 
 
 module SevSegDisp(
-    input CLK,            // 100 MHz
-    input MODE,           // 0 - Hex, 1 - Decimal
-    input [15:0] DATA_IN,
-    output [7:0] CATHODES,
-    output [3:0] ANODES
+    input logi CLK,            // 100 MHz
+    input logic MODE,           // 0 - Hex, 1 - Decimal
+    input logic s_reset,
+    input logic [15:0] DATA_IN,
+    output logic [7:0] CATHODES,
+    output logic [3:0] ANODES
     );
 
     logic [15:0] BCD_Val;
@@ -42,6 +43,7 @@ module SevSegDisp(
     CathodeDriver CathMod (
         .HEX(Hex_Val),
         .CLK(CLK),
+        .s_reset(s_reset),
         .CATHODES(CATHODES),
         .ANODES(ANODES)
     );

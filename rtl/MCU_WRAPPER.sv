@@ -37,7 +37,6 @@ module MCU_WRAPPER(
     localparam BUTTON_AD  = 32'h11000080; //32'h11000080
     
    // Signals for connecting OTTER_MCU to OTTER_wrapper /////////////////////
-    logic clk_50 = 0;
     logic [2:0] mem_data;
     logic [31:0] IOBUS_out, IOBUS_in, IOBUS_addr;
     logic s_reset, IOBUS_RDEN, IOBUS_WE, Board_WE;
@@ -90,6 +89,7 @@ module MCU_WRAPPER(
    SevSegDisp SSG_DISP (
        .DATA_IN(r_SSEG),
        .CLK(CLK),
+       .s_reset(s_reset),
        .MODE(1'b0),
        .CATHODES(CATHODES),
        .ANODES(ANODES)
@@ -97,7 +97,8 @@ module MCU_WRAPPER(
                             
    // Clock Divider to create 50 MHz Clock //////////////////////////////////
    always_ff @(posedge CLK) begin
-       clk_50 <= ~clk_50;
+        if(s_reset) clk_50 <= 1'b0;
+        else clk_50 <= ~clk_50;
    end
    
    // Connect Signals ///////////////////////////////////////////////////////

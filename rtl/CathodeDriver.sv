@@ -21,23 +21,31 @@
 
 module CathodeDriver(
     input logic CLK,
+    input logic s_reset,
     input logic [15:0] HEX,
     output logic [7:0] CATHODES,
     output logic [3:0] ANODES
     );
     
-    logic s_clk_500 = 1'b0;             // 250Hz refresh clock
-    logic [1:0] r_disp_digit = 2'b00;   // current digit being displayed
-    logic [19:0] clk_div_counter = 20'h00000;
-
+    logic s_clk_500;         // 250Hz refresh clock
+    logic [1:0] r_disp_digit; // current digit being displayed
+    logic [19:0] clk_div_counter;
     // Clock Divider to create 500 Hz refresh from 100 MHz clock
+
+
 	always_ff @(posedge CLK) begin
-        clk_div_counter <= clk_div_counter + 1;
-        
-        // x186A0 = 1*10^5 = 1 ms toggle (x30D40)
-        if ( clk_div_counter == 20'h186A0) begin
+        if(s_reset) begin
+            s_clk_500 <= 1'b0;
+            r_disp_digit <= 2'b00;
             clk_div_counter <= 20'h00000;
-            s_clk_500 <= ~s_clk_500;   // toggle every 1 ms creates 500 Hz clock
+        end else begin
+            clk_div_counter <= clk_div_counter + 1;
+            
+            // x186A0 = 1*10^5 = 1 ms toggle (x30D40)
+            if ( clk_div_counter == 20'h186A0) begin
+                clk_div_counter <= 20'h00000;
+                s_clk_500 <= ~s_clk_500;   // toggle every 1 ms creates 500 Hz clock
+            end
         end
     end
     
