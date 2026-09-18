@@ -20,7 +20,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-module OTTER_Wrapper(
+module MCU_WRAPPER(
    input logic CLK,
    input logic BTNC,
    input logic BTNC2,
