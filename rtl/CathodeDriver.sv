@@ -32,12 +32,12 @@ module CathodeDriver(
 
     // Clock Divider to create 500 Hz refresh from 100 MHz clock
 	always_ff @(posedge CLK) begin
-        clk_div_counter = clk_div_counter + 1;
+        clk_div_counter <= clk_div_counter + 1;
         
         // x186A0 = 1*10^5 = 1 ms toggle (x30D40)
         if ( clk_div_counter == 20'h186A0) begin
-            clk_div_counter = 20'h00000;
-            s_clk_500 = ~s_clk_500;   // toggle every 1 ms creates 500 Hz clock
+            clk_div_counter <= 20'h00000;
+            s_clk_500 <= ~s_clk_500;   // toggle every 1 ms creates 500 Hz clock
         end
     end
     
@@ -47,89 +47,89 @@ module CathodeDriver(
             2'b00: begin
                 ANODES= 4'b1110;
                 case (HEX[3:0])
-                    4'b0000: CATHODES = 8'b10000001; //0
-                    4'b0001: CATHODES = 8'b11001111; //1
-                    4'b0010: CATHODES = 8'b10010010; //2
-                    4'b0011: CATHODES = 8'b10000110; //3
-                    4'b0100: CATHODES = 8'b11001100; //4
-                    4'b0101: CATHODES = 8'b10100100; //5
-                    4'b0110: CATHODES = 8'b10100000; //6
-                    4'b0111: CATHODES = 8'b10001111; //7
-                    4'b1000: CATHODES = 8'b10000000; //8
-                    4'b1001: CATHODES = 8'b10001100; //9
-                    4'b1010: CATHODES = 8'b10001000; //a
-                    4'b1011: CATHODES = 8'b11100000; //b
-                    4'b1100: CATHODES = 8'b10110001; //c
-                    4'b1101: CATHODES = 8'b11000010; //d
-                    4'b1110: CATHODES = 8'b10110000; //e
-                    4'b1111: CATHODES = 8'b10111000; //f
-                    default: CATHODES = 8'b11111111; // failsafe turn off
+                    4'b0000: CATHODES <= 8'b10000001; //0
+                    4'b0001: CATHODES <= 8'b11001111; //1
+                    4'b0010: CATHODES <= 8'b10010010; //2
+                    4'b0011: CATHODES <= 8'b10000110; //3
+                    4'b0100: CATHODES <= 8'b11001100; //4
+                    4'b0101: CATHODES <= 8'b10100100; //5
+                    4'b0110: CATHODES <= 8'b10100000; //6
+                    4'b0111: CATHODES <= 8'b10001111; //7
+                    4'b1000: CATHODES <= 8'b10000000; //8
+                    4'b1001: CATHODES <= 8'b10001100; //9
+                    4'b1010: CATHODES <= 8'b10001000; //a
+                    4'b1011: CATHODES <= 8'b11100000; //b
+                    4'b1100: CATHODES <= 8'b10110001; //c
+                    4'b1101: CATHODES <= 8'b11000010; //d
+                    4'b1110: CATHODES <= 8'b10110000; //e
+                    4'b1111: CATHODES <= 8'b10111000; //f
+                    default: CATHODES <= 8'b11111111; // failsafe turn off
                 endcase
             end
             2'b01: begin
                 ANODES= 4'b1101;
                 case (HEX[7:4])
-                    4'b0000: CATHODES = 8'b10000001;
-                    4'b0001: CATHODES = 8'b11001111;
-                    4'b0010: CATHODES = 8'b10010010;
-                    4'b0011: CATHODES = 8'b10000110;
-                    4'b0100: CATHODES = 8'b11001100;
-                    4'b0101: CATHODES = 8'b10100100;
-                    4'b0110: CATHODES = 8'b10100000;
-                    4'b0111: CATHODES = 8'b10001111;
-                    4'b1000: CATHODES = 8'b10000000;
-                    4'b1001: CATHODES = 8'b10001100;
-                    4'b1010: CATHODES = 8'b10001000; //a
-                    4'b1011: CATHODES = 8'b11100000;
-                    4'b1100: CATHODES = 8'b10110001;
-                    4'b1101: CATHODES = 8'b11000010;
-                    4'b1110: CATHODES = 8'b10110000;
-                    4'b1111: CATHODES = 8'b10111000;
-                    default: CATHODES = 8'b11111111; // all off on error
+                    4'b0000: CATHODES <= 8'b10000001;
+                    4'b0001: CATHODES <= 8'b11001111;
+                    4'b0010: CATHODES <= 8'b10010010;
+                    4'b0011: CATHODES <= 8'b10000110;
+                    4'b0100: CATHODES <= 8'b11001100;
+                    4'b0101: CATHODES <= 8'b10100100;
+                    4'b0110: CATHODES <= 8'b10100000;
+                    4'b0111: CATHODES <= 8'b10001111;
+                    4'b1000: CATHODES <= 8'b10000000;
+                    4'b1001: CATHODES <= 8'b10001100;
+                    4'b1010: CATHODES <= 8'b10001000; //a
+                    4'b1011: CATHODES <= 8'b11100000;
+                    4'b1100: CATHODES <= 8'b10110001;
+                    4'b1101: CATHODES <= 8'b11000010;
+                    4'b1110: CATHODES <= 8'b10110000;
+                    4'b1111: CATHODES <= 8'b10111000;
+                    default: CATHODES <= 8'b11111111; // all off on error
                 endcase
             end
             2'b10: begin
                 ANODES= 4'b1011;
                 case (HEX[11:8])
-                    4'b0000: CATHODES = 8'b10000001;
-                    4'b0001: CATHODES = 8'b11001111;
-                    4'b0010: CATHODES = 8'b10010010;
-                    4'b0011: CATHODES = 8'b10000110;
-                    4'b0100: CATHODES = 8'b11001100;
-                    4'b0101: CATHODES = 8'b10100100;
-                    4'b0110: CATHODES = 8'b10100000;
-                    4'b0111: CATHODES = 8'b10001111;
-                    4'b1000: CATHODES = 8'b10000000;
-                    4'b1001: CATHODES = 8'b10001100;
-                    4'b1010: CATHODES = 8'b10001000; //a
-                    4'b1011: CATHODES = 8'b11100000;
-                    4'b1100: CATHODES = 8'b10110001;
-                    4'b1101: CATHODES = 8'b11000010;
-                    4'b1110: CATHODES = 8'b10110000;
-                    4'b1111: CATHODES = 8'b10111000;
-                    default: CATHODES = 8'b11111111; // all off on error
+                    4'b0000: CATHODES <= 8'b10000001;
+                    4'b0001: CATHODES <= 8'b11001111;
+                    4'b0010: CATHODES <= 8'b10010010;
+                    4'b0011: CATHODES <= 8'b10000110;
+                    4'b0100: CATHODES <= 8'b11001100;
+                    4'b0101: CATHODES <= 8'b10100100;
+                    4'b0110: CATHODES <= 8'b10100000;
+                    4'b0111: CATHODES <= 8'b10001111;
+                    4'b1000: CATHODES <= 8'b10000000;
+                    4'b1001: CATHODES <= 8'b10001100;
+                    4'b1010: CATHODES <= 8'b10001000; //a
+                    4'b1011: CATHODES <= 8'b11100000;
+                    4'b1100: CATHODES <= 8'b10110001;
+                    4'b1101: CATHODES <= 8'b11000010;
+                    4'b1110: CATHODES <= 8'b10110000;
+                    4'b1111: CATHODES <= 8'b10111000;
+                    default: CATHODES <= 8'b11111111; // all off on error
                 endcase
             end
             2'b11: begin
                 ANODES= 4'b0111;
                 case (HEX[15:12])
-                    4'b0000: CATHODES = 8'b10000001;
-                    4'b0001: CATHODES = 8'b11001111;
-                    4'b0010: CATHODES = 8'b10010010;
-                    4'b0011: CATHODES = 8'b10000110;
-                    4'b0100: CATHODES = 8'b11001100;
-                    4'b0101: CATHODES = 8'b10100100;
-                    4'b0110: CATHODES = 8'b10100000;
-                    4'b0111: CATHODES = 8'b10001111;
-                    4'b1000: CATHODES = 8'b10000000;
-                    4'b1001: CATHODES = 8'b10001100;
-                    4'b1010: CATHODES = 8'b10001000; //a
-                    4'b1011: CATHODES = 8'b11100000;
-                    4'b1100: CATHODES = 8'b10110001;
-                    4'b1101: CATHODES = 8'b11000010;
-                    4'b1110: CATHODES = 8'b10110000;
-                    4'b1111: CATHODES = 8'b10111000;
-                    default: CATHODES = 8'b11111111; // all off on error
+                    4'b0000: CATHODES <= 8'b10000001;
+                    4'b0001: CATHODES <= 8'b11001111;
+                    4'b0010: CATHODES <= 8'b10010010;
+                    4'b0011: CATHODES <= 8'b10000110;
+                    4'b0100: CATHODES <= 8'b11001100;
+                    4'b0101: CATHODES <= 8'b10100100;
+                    4'b0110: CATHODES <= 8'b10100000;
+                    4'b0111: CATHODES <= 8'b10001111;
+                    4'b1000: CATHODES <= 8'b10000000;
+                    4'b1001: CATHODES <= 8'b10001100;
+                    4'b1010: CATHODES <= 8'b10001000; //a
+                    4'b1011: CATHODES <= 8'b11100000;
+                    4'b1100: CATHODES <= 8'b10110001;
+                    4'b1101: CATHODES <= 8'b11000010;
+                    4'b1110: CATHODES <= 8'b10110000;
+                    4'b1111: CATHODES <= 8'b10111000;
+                    default: CATHODES <= 8'b11111111; // all off on error
                 endcase
             end
             default: begin      // digit error turn everything off
