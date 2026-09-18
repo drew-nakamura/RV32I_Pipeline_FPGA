@@ -29,7 +29,7 @@ module MCU_WRAPPER(
    output logic [7:0] CATHODES,
    output logic [3:0] ANODES
    );
-       
+    logic clk_50; //50 MHz clock
     // INPUT PORT IDS BASED ON MMIO//////////////////////////////////////////////
     localparam SWITCHES_AD = 32'h11000000;
     localparam LEDS_AD    = 32'h11000020; //32'h11000020
@@ -42,7 +42,7 @@ module MCU_WRAPPER(
     logic s_reset, IOBUS_RDEN, IOBUS_WE, Board_WE;
    
    // Registers for buffering outputs  /////////////////////////////////////
-   logic [15:0] r_SSEG;
+    logic [15:0] r_SSEG;
     //=====DMEM WIRES======
     logic DMEM_RDEN, DMEM_WE;
     logic [31:0] DMEM_DATA;

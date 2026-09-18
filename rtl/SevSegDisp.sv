@@ -19,7 +19,7 @@
 
 
 module SevSegDisp(
-    input logi CLK,            // 100 MHz
+    input logic CLK,            // 100 MHz
     input logic MODE,           // 0 - Hex, 1 - Decimal
     input logic s_reset,
     input logic [15:0] DATA_IN,
