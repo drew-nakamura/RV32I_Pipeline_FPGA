@@ -8,7 +8,7 @@
 //     .JAL_ADDR(),
 //     .PC()
 //     );
-import CPU_TOP_pkg::*;
+import CPU_pkg::*;
 
 module Program_Counter(
     input logic reset,

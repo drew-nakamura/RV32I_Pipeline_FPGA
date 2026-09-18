@@ -62,6 +62,12 @@ typedef enum logic [3:0] {
 
 typedef struct packed {
     logic [31:0] PC;
+    logic [31:0] ir;
+    instr_name_e instruction;
+} if_id_t;
+
+typedef struct packed {
+    logic [31:0] PC;
     logic [2:0] func3;
     logic srcA_SEL;
     logic RF_WE;
@@ -98,7 +104,6 @@ typedef struct packed {
     logic [1:0] RF_SEL;
     logic [4:0] reg_write_addr;
     logic [31:0] ALU_result;
-    logic [31:0] IO_write_data;
     instr_name_e instruction;
 } ex_mem_t;
 

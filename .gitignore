@@ -1,44 +1,22 @@
-# Vivado-generated directories
-*.cache/
-*.gen/
-*.hw/
-*.ip_user_files/
-*.runs/
-*.sim/
+# Track only rtl/, sim/, tb/, README.md, and this file.
+# Vivado, Xcelium notes, Cursor, and generated files stay local.
 
-# Vivado temporary files
-.Xil/
-*.jou
-*.log
-*.str
-*.pb
-*.wdb
-*.wcfg
-webtalk*.xml
-webtalk*.jou
+/*
+!.gitignore
+!README.md
+!rtl/
+!rtl/**
+!sim/
+!sim/**
+!tb/
+!tb/**
 
-# Generated FPGA outputs
-*.bit
-*.bin
-*.ltx
-
-# Simulation outputs
+# Even inside allowed trees, skip generated simulation junk
 work/
 xsim.dir/
 transcript
 *.vcd
-
-# Editor and OS files
-.vscode/
-.DS_Store
-Thumbs.db
-
-# cursor stuff
-.cursor
-
-# Media and Misc
-PHOTOS/
-
-# Backups
-*~
-*.bak
+*.log
+*.jou
+*.pb
+*.wdb

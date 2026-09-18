@@ -26,7 +26,7 @@
 // );
 module DMEM(
     input logic CLK,
-    input logic WE,
+    input logic DMEM_WE,
     input logic RDEN,
     input logic [10:0] address,
     input logic [31:0] data_in,
@@ -57,7 +57,7 @@ module DMEM(
 
     always_ff @(posedge CLK) begin
         //=====================================WRITE=============
-        if (WE) begin     // write enable and valid address space
+        if (DMEM_WE) begin     // write enable and valid address space
             case({mem_size, byteOffset})
                 4'b0000: memory[wordAddress][7:0]   <= data_in[7:0];     // sb at byte offsets
                 4'b0001: memory[wordAddress][15:8]  <= data_in[7:0];

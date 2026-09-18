@@ -37,14 +37,14 @@ module Control_Unit_Decoder(
         memWE = 1'b0;
         memRDEN = 1'b0;
         branch_i = 1'b0;
-        jump_i = 1'b0;
+        jal_i = 1'b0;
         
         case(opcode)
         7'b0110111://==U-Type -> LUI====================
         begin
             ALU_FUN = alu_LUI_COPY;
             srcA_SEL = srca_U_TYPE;
-            RF_SEL = alu_ALU;
+            RF_SEL = WB_ALU;
             RF_WE = 1'b1;
         end
             
@@ -83,7 +83,7 @@ module Control_Unit_Decoder(
             //Size difference is detemrined in the memory module
             srcA_SEL =  srca_rs1;
             srcB_SEL = srcb_I_TYPE;
-            RF_SEL = WB_MEM; //Write back stage will load from mem
+            RF_SEL = WB_DATA_IN; //Write back stage will load from mem
             memRDEN = 1;
             RF_WE = 1'b1;
         end
@@ -144,11 +144,12 @@ module Control_Unit_Decoder(
                 srcA_SEL =  'X;
                 srcB_SEL = 'X;
                 RF_SEL = 'X;
-                PC_SEL = 'X;
                 RF_WE = 'X;
-                PC_WE = 'X;
                 memWE = 'X;
                 memRDEN = 'X;
+                branch_i = 'X;
+                jalr_i = 'X;
+                jal_i = 'X;
         end
         endcase
     end

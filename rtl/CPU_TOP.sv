@@ -30,12 +30,14 @@ module CPU_TOP(
     );
 
     //===Structs====
+    if_id_t if_id_d;
+    if_id_t if_id_q;
     id_ex_t id_ex_d;  // Next value
     id_ex_t id_ex_q;  // Registered/current value 
     ex_mem_t ex_mem_d;
     ex_mem_t ex_mem_q;
     mem_wb_t mem_wb_d;
-     mem_wb_t mem_wb_q;
+    mem_wb_t mem_wb_q;
 
     //====ENUMS=====
     instr_name_e instruction;
@@ -56,7 +58,7 @@ module CPU_TOP(
     //===Control Unit Wires===
     logic srcA_SEL, RF_WE, memWE, memRDEN, branch_i, jal_i, jalr_i;
     logic [1:0] srcB_SEL;
-    logic [2:0] RF_SEL;
+    logic [1:0] RF_SEL;
     logic [3:0] ALU_FUN;
 
     //===Branch Cond Gen Wires===
@@ -64,6 +66,7 @@ module CPU_TOP(
 
     //===PC Decoder Wires===
     logic [1:0] PC_SEL;
+    logic [31:0] jalr, branch, jal;
 
     //===Immediate Generator Wires===
     logic [31:0] U_Type, I_Type, S_Type, B_Type, J_Type;
@@ -71,48 +74,65 @@ module CPU_TOP(
     //===ALU WIRES====
     logic [31:0] srcA, srcB, ALU_out;
     logic [31:0] srcA_REAL, srcB_REAL;
+    logic [31:0] ALU_result;
 
     //===IO_Formater Wires===
     logic [31:0] IO_write_data;
     logic [31:0] IO_read_data;
 
     //===HAZARD WIRES===
-    logic STALL_EX, STALL_ID, STALL_IF;
-    logic Hazard_FLUSH_ID_EX, Hazard_FLUSH_EX_MEM;
+    logic FORW_FLUSH_EX_MEM, FORW_STALL_ID_EX, FORW_STALL_IF_ID;
+    logic Hazard_FLUSH_IF_ID, Hazard_FLUSH_ID_EX;
     logic [1:0] srcA_FORWARD_SEL, srcB_FORWARD_SEL;
 
     //========== FETCH ===============================
     Program_Counter Program_Counter(
         .reset(RST),
         .PC_SEL(PC_SEL), //Comes from EX stage
-        .PC_PLUS_FOUR(id_ex_q.PC + 4),//Comes from EX stage
+        .PC_PLUS_FOUR(if_id_q.PC + 4),//Comes from EX stage
         .JALR_ADDR(jalr),
         .BRANCH_ADDR(branch),
         .JAL_ADDR(jal),
         .PC(PC)
     );
 
-    IMEM IMEM( //Also lowkey acts like the IF/ID reg, since it's sync read, and the ir is ready by the ned of the posedge
+    IMEM IMEM(
         .CLK(CLK),
         .PC(PC),
-        .instruction(ir),
-        .PC_USED(PC_USED),
-        .STALL_IF(STALL_IF)
+        .instruction(ir)
     );
+    assign instruction = decode_instr_name(ir);
 
+    always_comb begin
+        if_id_d.PC = PC;
+        if_id_d.ir = ir;
+        if_id_d.instruction = instruction;
+    end
+
+    always_ff @(posedge CLK) begin
+        if (RST || Hazard_FLUSH_IF_ID) begin
+            if_id_q <= '0;
+        end
+        else if (FORW_STALL_IF_ID) begin
+            if_id_q <= if_id_q;
+        end
+        else begin
+            if_id_q <= if_id_d;
+        end
+    end
     //========== DECODE ===============================
     
-    assign instruction = decode_instr_name(ir);
+   
 
     REG_FILE REG_FILE(
         .CLK(CLK),
-        .en(mem_wb_q.RF_WE),      //WB
-        .adr1(ir[19:15]),   //ID
-        .adr2(ir[24:20]),    //ID
-        .w_adr(mem_wb_q.reg_write_addr),   //WB
-        .w_data(write_data),  //WB
-        .rs1(id_ex_d.rs1),  //ID
-        .rs2(id_ex_d.rs2)   //ID
+        .en(ex_mem_q.RF_WE),      
+        .adr1(ir[19:15]),   
+        .adr2(ir[24:20]),    
+        .w_adr(ex_mem_q.reg_write_addr),  
+        .w_data(write_data),  
+        .rs1(rs1),  //ID
+        .rs2(rs2)   //ID
     );
 
     Control_Unit_Decoder Control_Unit_Decoder(
@@ -163,18 +183,20 @@ module CPU_TOP(
         id_ex_d.J_Type = J_Type;
         id_ex_d.rs1_addr = ir[19:15];
         id_ex_d.rs2_addr = ir[24:20];
+        id_ex_d.rs1 = rs1;
+        id_ex_d.rs2 = rs2;
         id_ex_d.instruction = instruction;
     end
 
-    always_ff @(posedge clk) begin
-        if (reset) begin
+    always_ff @(posedge CLK) begin
+        if (RST || Hazard_FLUSH_ID_EX) begin
             id_ex_q <= '0;
         end
-        else if (STALL_ID) begin
+        else if (FORW_STALL_ID_EX) begin
             id_ex_q <= id_ex_q;
         end
-        else if (STALL_IF) begin
-            //If we dont stall EX but IF stalls, this shouldnt really get anything.
+        else if (FORW_STALL_ID_EX) begin
+            //If we dont stall EX but ID stalls, this shouldnt really get anything.
             //This should really do anything bad, but if some weird stuff happens its probably from this
             id_ex_q <= '0; //
         end
@@ -184,7 +206,7 @@ module CPU_TOP(
     end
 
 //=========EX STAGE ========================
-    Branch_Condition_Generator (
+    Branch_Condition_Generator Branch_Condition_Generator(
         .rs1(id_ex_q.rs1),
         .rs2(id_ex_q.rs2),
         .br_lt(br_lt),
@@ -203,7 +225,7 @@ module CPU_TOP(
         .PC_SEL(PC_SEL)
     );
 
-    Jump_Branch_Address_Generator (
+    Jump_Branch_Address_Generator Jump_Branch_Address_Generator(
         .PC(id_ex_q.PC),
         .J_Type(id_ex_q.J_Type),
         .B_Type(id_ex_q.B_Type),
@@ -262,6 +284,10 @@ module CPU_TOP(
         ex_mem_d.reg_write_addr = id_ex_q.reg_write_addr;
         ex_mem_d.ALU_result = ALU_result;
         //FUCK IT LETS DO IT, data is caught by the psoedge to read/write dmem, as data should be ready by the ned of EX
+        ex_mem_d.mem_size = id_ex_q.mem_size;
+        ex_mem_d.mem_sign = id_ex_q.mem_sign;
+        ex_mem_d.memRDEN = id_ex_q.memRDEN;
+        ex_mem_d.memWE = id_ex_q.memWE;
         mem_data = {id_ex_q.mem_size, id_ex_q.mem_sign};
         DATA_ADDRESS = ALU_result;
         DATA_OUT = id_ex_q.rs2;
@@ -271,10 +297,10 @@ module CPU_TOP(
     end
 
     always_ff @(posedge CLK) begin
-        if (RST) begin
+        if (RST || Hazard_FLUSH_EX_MEM) begin
             ex_mem_q <= '0;
         end
-        else if (STALL_EX) begin
+        else if (FORW_FLUSH_EX_MEM) begin
             //Like the earlier one, if EX stalls then mem shouldnt really update, 
             // and i dont really wanna add a valid bit for this so we just gonna 
             // make it 0.
@@ -334,9 +360,9 @@ module CPU_TOP(
         .MEM_DMEM_RDEN(ex_mem_q.memRDEN),
         .WB_DMEM_RDEN(mem_wb_q.memRDEN),
         .WB_REG_WE(mem_wb_q.RF_WE),
-        .STALL_IF(STALL_IF),
-        .STALL_ID(STALL_ID),
-        .STALL_EX(STALL_EX),
+        .FLUSH_EX_MEM(FORW_FLUSH_EX_MEM),
+        .STALL_IF_ID(FORW_STALL_IF_ID),
+        .STALL_ID_EX(FORW_STALL_ID_EX),
         .srcA_FORWARD_SEL(srcA_FORWARD_SEL),
         .srcB_FORWARD_SEL(srcB_FORWARD_SEL)
     );
@@ -346,8 +372,8 @@ module CPU_TOP(
         .jal_i(jal_i),
         .jalr_i(jalr_i),
         .PC_SEL(PC_SEL),
-        .Hazard_FLUSH_ID_EX(Hazard_FLUSH_ID_EX),
-        .Hazard_FLUSH_EX_MEM(Hazard_FLUSH_EX_MEM)
+        .Hazard_FLUSH_IF_ID(Hazard_FLUSH_IF_ID),
+        .Hazard_FLUSH_ID_EX(Hazard_FLUSH_ID_EX)
     );
 
 endmodule

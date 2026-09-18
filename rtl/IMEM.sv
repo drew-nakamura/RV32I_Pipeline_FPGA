@@ -19,15 +19,13 @@
 // IMEM (
 //     .CLK(),
 //     .PC(),
-//     .instruction(),
-//     .PC_USED()
+//     .instruction()
 //     );
 
 module IMEM(
     input logic CLK,
     input logic [31:0] PC,
-    output logic [31:0] instruction,
-    output logic [31:0] PC_USED
+    output logic [31:0] instruction
     );
 
     logic [12:0] wordAddress;
@@ -43,8 +41,7 @@ module IMEM(
     //no non word read
     assign wordAddress ={PC[12:2]};
 
-    always_ff @(posedge clk) begin
+    always_ff @(posedge CLK) begin
         instruction <= instruction_memory[wordAddress];
-        PC_USED <= PC;
     end
 endmodule
