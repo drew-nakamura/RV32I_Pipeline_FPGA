@@ -103,4 +103,9 @@ module MCU_WRAPPER(
    // Connect Signals ///////////////////////////////////////////////////////
    assign s_reset = BTNC;
 
+   always_ff @ (posedge clk_50) begin
+        if(LEDS_WE) LEDS   <= IOBUS_out[15:0];
+        if(SSEG_WE) r_SSEG <= IOBUS_out[15:0];
+    end
+
    endmodule

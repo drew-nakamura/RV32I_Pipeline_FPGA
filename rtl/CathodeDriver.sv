@@ -20,8 +20,8 @@
 
 
 module CathodeDriver(
-    input CLK,
-    input [15:0] HEX,
+    input logic CLK,
+    input logic [15:0] HEX,
     output logic [7:0] CATHODES,
     output logic [3:0] ANODES
     );
