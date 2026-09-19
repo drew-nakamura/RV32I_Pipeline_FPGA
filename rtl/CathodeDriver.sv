@@ -56,7 +56,7 @@ module CathodeDriver(
             r_disp_digit <= r_disp_digit + 1;
         end
         case (r_disp_digit)
-            2'b00: begin\
+            2'b00: begin
                 ANODES <= 4'b1110;
                 case (HEX[3:0])
                     4'b0000: CATHODES <= 8'b10000001; //0
