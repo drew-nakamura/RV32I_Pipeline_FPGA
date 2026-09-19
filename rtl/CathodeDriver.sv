@@ -36,7 +36,6 @@ module CathodeDriver(
 	always_ff @(posedge CLK) begin
         if(s_reset) begin
             s_clk_500 <= 1'b0;
-            r_disp_digit <= 2'b00;
             clk_div_counter <= 20'h00000;
         end else begin
             clk_div_counter <= clk_div_counter + 1;
@@ -51,9 +50,13 @@ module CathodeDriver(
     
     // Refresh Seven Segment Display every 240 Hz
     always_ff @(posedge s_clk_500) begin
+        if(s_reset) begin
+            r_disp_digit <= 2'b00;
+        end else begin
+            r_disp_digit <= r_disp_digit + 1;
+        end
         case (r_disp_digit)
-            2'b00: begin
-                if(!s_reset) r_disp_digit <= r_disp_digit + 1; //lowkey dumb but i keep getting multi drive errors
+            2'b00: begin\
                 ANODES <= 4'b1110;
                 case (HEX[3:0])
                     4'b0000: CATHODES <= 8'b10000001; //0
@@ -76,7 +79,6 @@ module CathodeDriver(
                 endcase
             end
             2'b01: begin
-                if(!s_reset) r_disp_digit <= r_disp_digit + 1; //lowkey dumb but i keep getting multi drive errors
                 ANODES <= 4'b1101;
                 case (HEX[7:4])
                     4'b0000: CATHODES <= 8'b10000001;
@@ -99,7 +101,6 @@ module CathodeDriver(
                 endcase
             end
             2'b10: begin
-                if(!s_reset) r_disp_digit <= r_disp_digit + 1; //lowkey dumb but i keep getting multi drive errors
                 ANODES <= 4'b1011;
                 case (HEX[11:8])
                     4'b0000: CATHODES <= 8'b10000001;
@@ -122,7 +123,6 @@ module CathodeDriver(
                 endcase
             end
             2'b11: begin
-                if(!s_reset) r_disp_digit <= r_disp_digit + 1; //lowkey dumb but i keep getting multi drive errors
                 ANODES <= 4'b0111;
                 case (HEX[15:12])
                     4'b0000: CATHODES <= 8'b10000001;
@@ -135,7 +135,7 @@ module CathodeDriver(
                     4'b0111: CATHODES <= 8'b10001111;
                     4'b1000: CATHODES <= 8'b10000000;
                     4'b1001: CATHODES <= 8'b10001100;
-                    4'b1010: CATHODES <= 8'b10001000; //a
+                    4'b1010: CATHODES <= 8'b10001000;
                     4'b1011: CATHODES <= 8'b11100000;
                     4'b1100: CATHODES <= 8'b10110001;
                     4'b1101: CATHODES <= 8'b11000010;
@@ -147,7 +147,6 @@ module CathodeDriver(
             default: begin      // digit error turn everything off
                 ANODES <= 4'hF;
                 CATHODES <= 8'hFF;
-                if(!s_reset) r_disp_digit <= 2'b00;
             end
         endcase
         
