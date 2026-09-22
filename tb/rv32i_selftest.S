@@ -112,9 +112,9 @@
 #     Misalignment: there is no trap and no exception mechanism of any kind.
 #     SW at offsets 1-3 and SH at offset 3 simply have no case item, so the
 #     write is silently dropped and the load returns the `default: 0`.
-#     This program therefore only ever issues naturally aligned accesses.
+#     This program therefore only ever issues naturally aligned accesses.!!!!!!!!!!!!!!!!!!!! -Drew look at this more later
 #
-# (8) FENCE / ECALL / EBREAK
+# (8) FENCE / ECALL / EBREAK ////////////////////////////////////////////////////Bruh apparently there were more insturctiosn in the ISA than what was in the curriculum, so i need to add these when i have time.
 #     None of the three is decoded.  CPU_pkg::decode_instr_name returns
 #     UNKNOWN and Control_Unit_Decoder falls into its `default:` branch,
 #     which drives EVERY output to 'X -- including RF_WE, memWE, branch_i,

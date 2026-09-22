@@ -114,8 +114,7 @@ module CPU_TOP(
     end
     //========== DECODE ===============================
     
-   
-
+   //ASSUME ALL REGISTERS OTHER THAN x0 are JUNK AT START!!!!
     REG_FILE REG_FILE(
         .CLK(CLK),
         .en(ex_mem_q.RF_WE),      
@@ -181,7 +180,7 @@ module CPU_TOP(
         id_ex_d.rs2 = rs2;
         id_ex_d.rs1_used = rs1_used;
         id_ex_d.rs2_used = rs2_used;
-        id_ex_d.instruction = instruction;
+        id_ex_d.instruction = if_id_q.instruction;
     end
 
     always_ff @(posedge CLK) begin
@@ -203,8 +202,8 @@ module CPU_TOP(
 
 //=========EX STAGE ========================
     Branch_Condition_Generator Branch_Condition_Generator(
-        .rs1(id_ex_q.rs1),
-        .rs2(id_ex_q.rs2),
+        .rs1(srcA_REAL),
+        .rs2(srcB_REAL),
         .br_lt(br_lt),
         .br_eq(br_eq),
         .br_ltu(br_ltu)

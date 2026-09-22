@@ -31,18 +31,12 @@ module REG_FILE(
     output logic [31:0] rs1, rs2
     );
     
+    (* ram_style = "distributed" *)
     logic [31:0] registers [0:31]; //Create our 32, 32 bit registers
     //The otter wasnt designed with a reset, so we have no real 
     //way of initializing everything to 0 if we wanted to.
     
-    //For Assignment, Remove later, Not logically realistic.
-    initial begin 
-        static int i =0;
-        for (i = 0; i < 32; i++) begin
-            registers[i] = 0;
-        end
-    end
-    
+    //ASSUME ALL REGISTERS OTHER THAN x0 are JUNK AT START!!!!
     always_ff @(posedge CLK)
     begin
         if(en &&(w_adr != 5'd0))
