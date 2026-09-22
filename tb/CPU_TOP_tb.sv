@@ -3,73 +3,68 @@
 // Testbench: CPU_TOP_tb
 // DUT:       ../rtl/CPU_TOP.sv
 // Stage:     whole pipeline (FETCH through WB)
-// Date:      9/18/2026
+// Date:      9/21/2026
 //
 // Role in system:
-//   CPU_TOP is the 5-stage core. IMEM is inside it and is the only instruction
-//   source; DMEM lives in MCU_WRAPPER as memory-mapped I/O and is intentionally
-//   not in this bench. DATA_IN is tied to 0, so a load that does retire writes
-//   zero, and IOBUS_WE is observed but not scored against a memory model.
+//   CPU_TOP is the 5-stage core. IMEM is inside it. DMEM is not -- DATA_IN /
+//   DATA_OUT / DATA_ADDRESS / IOBUS_WE / IOBUS_RDEN / mem_data are the memory
+//   ports. This bench is the CPU-only self-test harness: the Otter wrapper,
+//   Interconnect, and real DMEM are not instantiated.
 //
 // Verification strategy:
-//   Load a $readmemh image into IMEM, clock the core at the same 50 MHz the
-//   wrapper uses, and let the program run for a fixed cycle budget. This is a
-//   program-level smoke harness, not an ISA scoreboard: the independent checks
-//   are the architectural invariants that must hold for ANY legal RV32I image
-//   (reset PC, IALIGN, x0). The register file dump at the end is how you
-//   inspect whether YOUR .mem did what you think it did.
+//   Load rv32i_selftest.S into IMEM. A behavioral memory on the IOBUS ports
+//   stands in for DMEM so Levels 6-10 have somewhere to read and write. The
+//   memory model is written from the ISA, not copied from DMEM.sv. The
+//   program is the scoreboard: when PC repeats, x30/x29 name the result.
 //
-// How to point IMEM at a program (do not edit CPU_TOP):
-//   xrun ... -defparam CPU_TOP_tb.dut.IMEM.MEM_FILE=\"myprog.mem\"
-//   or compile with  -define IMEM_MEM_FILE=\"myprog.mem\"
-//   The .mem path is resolved from the directory you launch xrun in.
+// How to point IMEM at the image (do not edit CPU_TOP):
+//   xrun ... -defparam CPU_TOP_tb.dut.IMEM.MEM_FILE=\"imem.mem\"
 //============================================================================
 
 //----------------------------------------------------------------------------
 // CONTRACT UNDER TEST
 //----------------------------------------------------------------------------
-// FUNC-1  While RST is asserted, PC is 32'h0. Program_Counter is combinational
-//         and reset is its highest-priority input.              [CPU_TOP.sv]
-// FUNC-2  After RST releases, PC[1:0] stays 2'b00. RV32I IALIGN is 32; a
-//         defined PC that is not word-aligned is a fetch bug, not a legal
-//         compressed instruction.                             [ISA Vol I 1.2]
-// FUNC-3  x0 remains 32'h0 for the whole run, regardless of any write the
-//         pipeline tries to aim at it.                         [ISA Vol I 2.1]
-// FUNC-4  After RST releases, PC is a defined (non-X) value. An X PC means
-//         PC_SEL was X: usually an X opcode from an unloaded IMEM word
-//         hitting Control_Unit_Decoder's default, or PC_Decoder's unique
-//         case falling to default.
+// FUNC-1  While RST is asserted, PC is 32'h0.
+// FUNC-2  After RST releases, a defined PC stays word-aligned.  [ISA Vol I 1.2]
+// FUNC-3  A defined nonzero in the x0 array slot is a write-gate failure.
+//         X in that slot means nothing ever wrote it -- that is legal.
+//                                                          [ISA Vol I 2.1]
+// FUNC-4  After RST releases, PC is defined. X means PC_SEL went X.
+// FUNC-5  Parked with x30 === 32'h600D_0000 and x31 === TOTAL_TESTS
+//         is the program's pass signature.
+// FUNC-6  Parked with x30 === 99 means JAL and BEQ both failed to loop.
+// FUNC-7  Parked with any other defined x30 is a failed self-test case:
+//         x30 is the test number, x29 the 1-based sub-check.
+// FUNC-8  Loads and stores on the IOBUS ports obey RV32I widths and
+//         sign/zero extension. The TB memory is the reference, not DMEM.sv.
+//                                                          [ISA Vol I 2.6]
 //
-// TIME-1  CLK is 50 MHz (20 ns period), matching MCU_WRAPPER's divided clock.
-//         The core is not run at the 100 MHz board clock.
-// TIME-2  RST is held for several rising edges so IMEM's synchronous read can
-//         produce a defined instruction and PC_USED at address 0 BEFORE reset
-//         is released. IMEM has no reset of its own; one posedge with PC=0 is
-//         the minimum, this TB holds more so the fill is not a race.
-// TIME-3  After RST deasserts, the core is allowed exactly RUN_CYCLES rising
-//         edges and then the bench stops. There is no tohost / ecall retire
-//         condition -- the budget IS the test.
-// TIME-4  RST is released on a negedge so Program_Counter's combinational PC
-//         (PC_USED + 4) is stable a half period before the next IMEM sample.
-//         Releasing on the posedge is a same-edge race with IMEM. [INVENTED]
+// TIME-1  CLK is 50 MHz (20 ns), the rate the wrapper feeds the core.
+// TIME-2  RST is held for several rising edges so IMEM can produce a
+//         defined ir / PC_USED at address 0 before fetch starts.
+// TIME-3  RST is released on a negedge so the combinational PC update
+//         does not race IMEM's posedge sample.                   [INVENTED]
+// TIME-4  A park is PC repeating for PARK_HOLD consecutive clocks.
+//         Longer than any stall this pipeline can raise.         [INVENTED]
+// TIME-5  No park by WATCHDOG clocks is a timeout, not a pass.
+// TIME-6  IOBUS address/WE/RDEN/DATA_OUT/mem_data are valid in EX.
+//         The TB memory samples them on the posedge into MEM and
+//         presents DATA_IN during MEM, matching CPU_TOP's comment
+//         that the BRAM read is ready for the WB mux on that stage.
+//                                                                [INVENTED]
 //
-// ASSUME-1 DATA_IN is tied to 0. Loads that retire write 0 into the register
-//          file. No DMEM, no MMIO, no store data check.         [INVENTED]
-// ASSUME-2 IMEM.MEM_FILE exists and $readmemh succeeds. Unloaded words stay
-//          X; an X opcode makes Control_Unit_Decoder drive 'X on every
-//          control output, which poisons PC_SEL and then PC. A program that
-//          runs off the end of its .mem will fail FUNC-2 / the X-on-PC
-//          watch as a consequence, not as a separate memory bug. [INVENTED]
-// ASSUME-3 The image is register/branch/jump code. Stores still toggle
-//          IOBUS_WE (driven combinationally from EX) but nothing consumes
-//          DATA_OUT. A store in the image is not a TB failure.  [INVENTED]
-// ASSUME-4 Hierarchical probes of dut.PC, dut.ir, dut.instruction,
-//          dut.PC_SEL, dut.REG_FILE.registers[] are legal under -access +rwc.
-//          Those nets are not on the CPU_TOP port list.         [INVENTED]
+// ASSUME-1 Hierarchical probes of dut.PC, dut.ir, dut.REG_FILE.registers[]
+//          are legal under -access +rwc.                         [INVENTED]
+// ASSUME-2 IMEM.MEM_FILE exists and $readmemh succeeds.          [INVENTED]
+// ASSUME-3 The image is rv32i_selftest.S at address 0 with
+//          ENABLE_LEVEL7 = 0, so TOTAL_TESTS is 130.             [INVENTED]
+// ASSUME-4 Only DMEM_BASE .. DMEM_LIMIT is backed by the TB memory.
+//          A store to TOHOST_ADDR is observed and dropped -- that
+//          address is unclaimed on the real interconnect too.    [INVENTED]
 //----------------------------------------------------------------------------
 
 `ifndef IMEM_MEM_FILE
-  `define IMEM_MEM_FILE "garbagestuff.mem"
+  `define IMEM_MEM_FILE "imem.mem"
 `endif
 
 import CPU_pkg::*;
@@ -77,13 +72,21 @@ import CPU_pkg::*;
 module CPU_TOP_tb;
 
     //------------------------------------------------------------------------
-    // Parameters
+    // Parameters -- pass signature is the program's, not the RTL's
     //------------------------------------------------------------------------
-    localparam int unsigned CLK_PERIOD  = 20;     // 50 MHz
-    localparam int unsigned RESET_CYCLES = 8;     // TIME-2: IMEM fill under RST
-    localparam int unsigned RUN_CYCLES  = 10000;
-    localparam int unsigned TRACE_HEAD  = 32;     // full trace through pipe fill
-    localparam int unsigned TRACE_STRIDE = 256;   // then periodic heartbeat
+    localparam int unsigned CLK_PERIOD   = 20;
+    localparam int unsigned RESET_CYCLES = 8;
+    localparam int unsigned PARK_HOLD    = 16;
+    localparam int unsigned WATCHDOG     = 200000;
+    localparam int unsigned TRACE_HEAD   = 40;
+    localparam int unsigned TRACE_STRIDE = 512;
+
+    localparam logic [31:0] PASS_SIG     = 32'h600D_0000;
+    localparam int unsigned TOTAL_TESTS  = 130;
+    localparam logic [31:0] POISON_CODE  = 32'd99;
+    localparam logic [31:0] TOHOST_ADDR  = 32'h1100_0100;
+    localparam logic [31:0] DMEM_BASE    = 32'h0000_8000;
+    localparam logic [31:0] DMEM_LIMIT   = 32'h0000_87FF;
 
     //------------------------------------------------------------------------
     // DUT signals
@@ -101,12 +104,17 @@ module CPU_TOP_tb;
     int errors = 0;
 
     int unsigned cycle_i;
+    int unsigned park_count;
+    int unsigned last_progress;
+    logic [31:0] last_pc;
+    bit          parked;
+    bit          timed_out;
+    bit          tohost_seen;
+    logic [31:0] tohost_data;
+
     int unsigned pc_x_cycles;
     int unsigned misalign_cycles;
     int unsigned x0_bad_cycles;
-    int unsigned ir_x_cycles;
-    int unsigned store_cycles;
-    int unsigned load_cycles;
     bit          pc_x_reported;
     bit          misalign_reported;
     bit          x0_reported;
@@ -123,21 +131,77 @@ module CPU_TOP_tb;
         .IOBUS_WE     (IOBUS_WE)
     );
 
-    // CPU_TOP does not expose IMEM's file parameter, so the override has to
-    // punch through the instance. Command-line -defparam wins over this if
-    // you pass one.
     defparam dut.IMEM.MEM_FILE = `IMEM_MEM_FILE;
 
     //------------------------------------------------------------------------
-    // Clock -- 50 MHz, same rate the wrapper feeds the core
+    // Clock -- core rate, no wrapper divider
     //------------------------------------------------------------------------
     initial CLK = 1'b0;
     always #(CLK_PERIOD/2) CLK = ~CLK;
 
     //------------------------------------------------------------------------
-    // Golden fragments. These are ISA facts, not a transcription of the RTL.
-    // A full ISS is out of scope for a cycle-budget harness; x0 and IALIGN
-    // are the two properties that do not depend on which .mem you loaded.
+    // Behavioral DMEM (FUNC-8 / TIME-6)
+    //
+    // Byte-addressable, ISA widths, sampled on the posedge the core uses
+    // to leave EX. Not a copy of DMEM.sv: that module's case statement is
+    // what a CPU-only bench is supposed to be independent of.
+    //------------------------------------------------------------------------
+    logic [7:0]  dmem [bit [31:0]];
+
+    function automatic bit in_dmem(input logic [31:0] a);
+        return (a >= DMEM_BASE) && (a <= DMEM_LIMIT);
+    endfunction
+
+    function automatic logic [31:0] pack_load(
+        input logic [31:0] addr,
+        input logic [1:0]  size,
+        input logic        sign
+    );
+        logic [7:0]  b0, b1, b2, b3;
+        b0 = dmem.exists(addr)   ? dmem[addr]   : 8'h00;
+        b1 = dmem.exists(addr+1) ? dmem[addr+1] : 8'h00;
+        b2 = dmem.exists(addr+2) ? dmem[addr+2] : 8'h00;
+        b3 = dmem.exists(addr+3) ? dmem[addr+3] : 8'h00;
+        case (size)
+            2'b00: return sign ? {24'b0, b0} : {{24{b0[7]}}, b0};   // LBU / LB
+            2'b01: return sign ? {16'b0, b1, b0} : {{16{b1[7]}}, b1, b0}; // LHU / LH
+            default: return {b3, b2, b1, b0};                       // LW
+        endcase
+    endfunction
+
+    task automatic do_store(
+        input logic [31:0] addr,
+        input logic [31:0] data,
+        input logic [1:0]  size
+    );
+        dmem[addr] = data[7:0];
+        if (size !== 2'b00) dmem[addr+1] = data[15:8];
+        if (size === 2'b10) begin
+            dmem[addr+2] = data[23:16];
+            dmem[addr+3] = data[31:24];
+        end
+    endtask
+
+    // Sample on the EX->MEM edge. write_data muxes DATA_IN while the load
+    // sits in ex_mem_q, so one cycle of latency is the whole budget -- a
+    // second register here would deliver the word a stage too late.
+    always_ff @(posedge CLK) begin
+        if (RST) begin
+            DATA_IN <= 32'h0;
+        end
+        else begin
+            if ((IOBUS_WE === 1'b1) && in_dmem(DATA_ADDRESS))
+                do_store(DATA_ADDRESS, DATA_OUT, mem_data[2:1]);
+
+            if ((IOBUS_RDEN === 1'b1) && in_dmem(DATA_ADDRESS))
+                DATA_IN <= pack_load(DATA_ADDRESS, mem_data[2:1], mem_data[0]);
+            else
+                DATA_IN <= 32'h0;
+        end
+    end
+
+    //------------------------------------------------------------------------
+    // Golden fragments -- program convention, not RTL
     //------------------------------------------------------------------------
     function automatic logic [31:0] x0_ref();
         return 32'h0;
@@ -147,11 +211,17 @@ module CPU_TOP_tb;
         return (pc[1:0] === 2'b00);
     endfunction
 
-    //------------------------------------------------------------------------
-    // Checker. `cond` is the already-evaluated predicate so the caller can
-    // use === on the probed net; we still tag every call with its contract
-    // line so a fail names the bucket without opening a waveform.
-    //------------------------------------------------------------------------
+    function automatic bit is_pass_sig(
+        input logic [31:0] x30,
+        input logic [31:0] x31
+    );
+        return (x30 === PASS_SIG) && (x31 === TOTAL_TESTS);
+    endfunction
+
+    function automatic logic [31:0] rf(input int unsigned idx);
+        return dut.REG_FILE.registers[idx];
+    endfunction
+
     task automatic check(
         input string tag,
         input string note,
@@ -164,37 +234,20 @@ module CPU_TOP_tb;
         end
     endtask
 
-    //------------------------------------------------------------------------
-    // Per-cycle invariants sampled after the posedge NBA update. Repeat
-    // failures are tallied, not printed 10000 times -- the first message is
-    // the one that tells you what broke; the tally at the end tells you how
-    // long it stayed broken.
-    //------------------------------------------------------------------------
     task automatic sample_invariants();
-        logic [31:0] pc_now;
-        logic [31:0] ir_now;
-        logic [31:0] x0_now;
-        pc_sel_e     pcsel_now;
-        instr_name_e iname;
+        logic [31:0] pc_now, ir_now, x0_now;
+        pc_now = dut.PC;
+        ir_now = dut.ir;
+        x0_now = rf(0);
 
-        pc_now    = dut.PC;
-        ir_now    = dut.ir;
-        x0_now    = dut.REG_FILE.registers[0];
-        pcsel_now = pc_sel_e'(dut.PC_SEL);
-        iname     = dut.instruction;
-
-        // FUNC-1 only applies while RST is high; checked in apply_reset().
-
-        // Repeat failures are counted, not reprinted. The first $error names
-        // the bug; the end-of-run tally says how long it lasted.
         checks++;
         if ($isunknown(pc_now)) begin
             pc_x_cycles++;
             if (!pc_x_reported) begin
                 pc_x_reported = 1'b1;
                 errors++;
-                $error("[%0t] FAIL [FUNC-4] PC went X. Usual causes: the .mem ended and an X opcode poisoned PC_SEL, or PC_Decoder's unique-case default fired.",
-                       $time);
+                $error("[%0t] FAIL [FUNC-4] PC went X at cycle %0d. Unloaded IMEM word, or an unimplemented opcode hit the decoder default.",
+                       $time, cycle_i);
             end
         end
         else if (!pc_word_aligned(pc_now)) begin
@@ -202,51 +255,45 @@ module CPU_TOP_tb;
             if (!misalign_reported) begin
                 misalign_reported = 1'b1;
                 errors++;
-                $error("[%0t] FAIL [FUNC-2] IALIGN: PC=0x%08h is not word-aligned (PC_SEL=%s ir=0x%08h %s)",
-                       $time, pc_now, pcsel_now.name(), ir_now, iname.name());
+                $error("[%0t] FAIL [FUNC-2] IALIGN: PC=0x%08h ir=0x%08h",
+                       $time, pc_now, ir_now);
             end
         end
 
         checks++;
-        if (x0_now !== x0_ref()) begin
+        if (!$isunknown(x0_now) && (x0_now !== x0_ref())) begin
             x0_bad_cycles++;
             if (!x0_reported) begin
                 x0_reported = 1'b1;
                 errors++;
-                $error("[%0t] FAIL [FUNC-3] x0=0x%08h, expected 0x%08h",
-                       $time, x0_now, x0_ref());
+                $error("[%0t] FAIL [FUNC-3] x0 array = 0x%08h, expected 0",
+                       $time, x0_now);
             end
         end
 
-        if ($isunknown(ir_now)) begin
-            ir_x_cycles++;
-            if (!ir_x_reported) begin
-                ir_x_reported = 1'b1;
-                $display("[%0t] NOTE [ASSUME-2] ir is X at PC=0x%08h. $readmemh missed this word, or fetch walked off the image.",
-                         $time, pc_now);
-            end
+        if ($isunknown(ir_now) && !ir_x_reported) begin
+            ir_x_reported = 1'b1;
+            $display("[%0t] NOTE [ASSUME-2] ir is X at PC=0x%08h.", $time, pc_now);
         end
 
-        if (IOBUS_WE === 1'b1)   store_cycles++;
-        if (IOBUS_RDEN === 1'b1) load_cycles++;
+        if ((IOBUS_WE === 1'b1) && (DATA_ADDRESS === TOHOST_ADDR)) begin
+            tohost_seen = 1'b1;
+            tohost_data = DATA_OUT;
+        end
     endtask
 
     task automatic maybe_trace();
-        bit          interesting;
-        pc_sel_e     pcsel_now;
-        instr_name_e iname;
-
-        pcsel_now = pc_sel_e'(dut.PC_SEL);
-        iname     = dut.instruction;
-        interesting = (cycle_i < TRACE_HEAD) ||
-                      ((cycle_i % TRACE_STRIDE) == 0) ||
-                      (dut.PC_SEL !== pc_PC4) ||
-                      (IOBUS_WE === 1'b1);
-
-        if (interesting)
-            $display("[%0t] cyc=%0d PC=0x%08h ir=0x%08h %s PC_SEL=%s WE=%0b RDEN=%0b ALU=0x%08h",
-                     $time, cycle_i, dut.PC, dut.ir, iname.name(),
-                     pcsel_now.name(), IOBUS_WE, IOBUS_RDEN, dut.ALU_result);
+        int unsigned progress;
+        progress = rf(31);
+        if ((progress !== last_progress) && !$isunknown(progress)) begin
+            $display("[%0t] progress test %0d  PC=0x%08h",
+                     $time, progress, dut.PC);
+            last_progress = progress;
+        end
+        else if ((cycle_i < TRACE_HEAD) || ((cycle_i % TRACE_STRIDE) == 0)) begin
+            $display("[%0t] cyc=%0d PC=0x%08h x30=0x%08h x31=%0d",
+                     $time, cycle_i, dut.PC, rf(30), rf(31));
+        end
     endtask
 
     task automatic apply_reset();
@@ -254,7 +301,6 @@ module CPU_TOP_tb;
         RST     = 1'b1;
         DATA_IN = 32'h0;
 
-        // TIME-2: clock under reset so IMEM can register PC=0 into ir / PC_USED.
         for (i = 0; i < RESET_CYCLES; i++) begin
             @(posedge CLK);
             #1;
@@ -263,94 +309,148 @@ module CPU_TOP_tb;
                   dut.PC === 32'h0);
         end
 
-        // After the fill, ir at address 0 should be a real instruction if the
-        // .mem actually loaded. One warning, not a hard fail -- an all-X image
-        // is a file problem, and the X-on-PC watch will catch the fallout.
         if ($isunknown(dut.ir))
-            $display("[%0t] NOTE [ASSUME-2] ir is still X after %0d reset cycles. Check that %s is visible to xrun.",
-                     $time, RESET_CYCLES, `IMEM_MEM_FILE);
+            $display("[%0t] NOTE [ASSUME-2] ir is still X after reset. Is %s visible to xrun?",
+                     $time, `IMEM_MEM_FILE);
 
-        // TIME-4: drop RST on a negedge so PC's combo update is not racing IMEM.
         @(negedge CLK);
         RST = 1'b0;
-        $display("[%0t] RST released; running %0d cycles at %0d ns period",
-                 $time, RUN_CYCLES, CLK_PERIOD);
+        $display("[%0t] RST released; watchdog = %0d cycles", $time, WATCHDOG);
     endtask
 
-    task automatic dump_regfile();
-        int i;
-        $display("----- register file after %0d cycles -----", RUN_CYCLES);
-        for (i = 0; i < 32; i++)
-            $display("  x%0d = 0x%08h", i, dut.REG_FILE.registers[i]);
+    task automatic dump_report_regs();
+        $display("  x29 (sub-check) = %0d", rf(29));
+        $display("  x30 (fail code) = 0x%08h (%0d)", rf(30), rf(30));
+        $display("  x31 (progress)  = %0d", rf(31));
+        $display("  PC              = 0x%08h", dut.PC);
+    endtask
+
+    task automatic score_halt();
+        logic [31:0] x29, x30, x31;
+        x29 = rf(29);
+        x30 = rf(30);
+        x31 = rf(31);
+
+        $display("----- halt after %0d cycles -----", cycle_i);
+        dump_report_regs();
+        if (tohost_seen)
+            $display("  tohost store    = 0x%08h", tohost_data);
+
+        if ($isunknown(x30) || $isunknown(x31)) begin
+            check("FUNC-5",
+                  $sformatf("parked with X in the report regs: x30=0x%08h x31=0x%08h", x30, x31),
+                  1'b0);
+        end
+        else if (is_pass_sig(x30, x31)) begin
+            check("FUNC-5", "pass signature matched", 1'b1);
+            $display("SELFTEST PASS: all %0d tests retired", TOTAL_TESTS);
+        end
+        else if (x30 === POISON_CODE) begin
+            check("FUNC-6",
+                  "x30==99: JAL and BEQ both failed to hold a park loop",
+                  1'b0);
+        end
+        else begin
+            check("FUNC-7",
+                  $sformatf("FAILED test %0d  sub-check %0d  (x31 progress=%0d)",
+                            x30, x29, x31),
+                  1'b0);
+            $display("SELFTEST FAIL: test %0d  sub-check %0d", x30, x29);
+        end
     endtask
 
     //------------------------------------------------------------------------
-    // Directed: reset contract, then the cycle-budget run. There is no
-    // constrained-random sweep -- the input is the .mem image.
+    // Directed: reset, run until park or watchdog. The .mem is the stimulus.
     //------------------------------------------------------------------------
     initial begin
-        $display("===== CPU_TOP_tb =====");
+        $display("===== CPU_TOP_tb (self-test harness) =====");
         $display("IMEM_MEM_FILE = %s", `IMEM_MEM_FILE);
-        $display("CLK           = %0d ns period (%0d MHz)", CLK_PERIOD, 1000/CLK_PERIOD);
-        $display("RUN_CYCLES    = %0d", RUN_CYCLES);
+        $display("TOTAL_TESTS   = %0d", TOTAL_TESTS);
+
+        last_pc       = 32'hXXXX_XXXX;
+        last_progress = 32'hFFFF_FFFF;
+        park_count    = 0;
+        parked        = 1'b0;
+        timed_out     = 1'b0;
+        cycle_i       = 0;
+        DATA_IN       = 32'h0;
 
         apply_reset();
 
-        for (cycle_i = 0; cycle_i < RUN_CYCLES; cycle_i++) begin
+        while (!parked && !timed_out) begin
             @(posedge CLK);
-            #1;                    // let NBA on IMEM / pipeline regs / RF settle
+            #1;
             sample_invariants();
             maybe_trace();
+
+            if (!$isunknown(dut.PC) && (dut.PC === last_pc))
+                park_count++;
+            else
+                park_count = 0;
+            last_pc = dut.PC;
+
+            if (park_count >= PARK_HOLD)
+                parked = 1'b1;
+
+            cycle_i++;
+            if (cycle_i >= WATCHDOG)
+                timed_out = 1'b1;
         end
 
-        dump_regfile();
+        if (timed_out && !parked) begin
+            check("TIME-5",
+                  $sformatf("watchdog: no park after %0d cycles; last test in x31=%0d PC=0x%08h",
+                            WATCHDOG, rf(31), dut.PC),
+                  1'b0);
+            dump_report_regs();
+        end
+        else begin
+            score_halt();
+        end
 
         $display("----- run stats -----");
-        $display("  PC was X for            %0d / %0d cycles", pc_x_cycles, RUN_CYCLES);
-        $display("  PC misaligned for       %0d / %0d cycles", misalign_cycles, RUN_CYCLES);
-        $display("  x0 nonzero for          %0d / %0d cycles", x0_bad_cycles, RUN_CYCLES);
-        $display("  ir was X for            %0d / %0d cycles", ir_x_cycles, RUN_CYCLES);
-        $display("  IOBUS_WE asserted        %0d cycles (stores; not scored)", store_cycles);
-        $display("  IOBUS_RDEN asserted      %0d cycles (loads; DATA_IN=0)", load_cycles);
-
-        //--------------------------------------------------------------------
-        // Coverage / completeness notes
-        //
-        //   - No store/load data checks: DMEM is I/O in the wrapper and is
-        //     not instantiated here (ASSUME-1 / ASSUME-3).
-        //   - No forwarding/hazard directed sequences: those belong in
-        //     Forwarding_Unit_tb / HazardUnit_tb. This harness only sees
-        //     them if the .mem happens to exercise them.
-        //   - No instruction-by-instruction scoreboard. If you want that,
-        //     it is a core-level ISS, not this file.
-        //--------------------------------------------------------------------
+        $display("  cycles                  %0d", cycle_i);
+        $display("  PC was X for            %0d cycles", pc_x_cycles);
+        $display("  PC misaligned for       %0d cycles", misalign_cycles);
+        $display("  x0 defined-nonzero for  %0d cycles", x0_bad_cycles);
 
         $display("=========================================");
         $display(" %0d / %0d checks passed", checks - errors, checks);
         $display("=========================================");
 
-        if (errors) $fatal(1, "CPU_TOP_tb: %0d check(s) failed", errors);
-        $finish;
+        if (errors)
+            $error("CPU_TOP_tb: %0d check(s) failed -- $stop so SimVision stays up", errors);
+        else
+            $display("CPU_TOP_tb: all checks passed -- $stop so SimVision stays up");
+
+        // $stop, not $finish: the GUI stays open and the waveform database
+        // stays attached. Drag signals from the Design Browser onto the
+        // wave window; the cursor reads values at a given time. Type
+        // `finish` in the console when you are done looking.
+        $stop;
     end
 
-    // Waveforms: uncomment for SimVision, then 'simvision waves.shm &'
-    // initial begin
-    //     $shm_open("waves.shm");
-    //     $shm_probe("AS");
-    // end
+    // SHM is Cadence's native dump. "A" = every signal in this scope,
+    // "S" = walk into dut / REG_FILE / IMEM so you can drag those too.
+    initial begin
+        $shm_open("waves.shm");
+        $shm_probe("AS");
+    end
 
 endmodule
 
 // ---------------------------------------------------------------------------
 // XCELIUM RUN NOTES  (run from tb/ on nanoHUB)
 // ---------------------------------------------------------------------------
-// Put the program image where xrun can see it (this directory, or an
-// absolute path in the defparam). IMEM's default name is garbagestuff.mem.
+// Put imem.mem (assembled rv32i_selftest.S) in the directory you launch
+// xrun from. No dmem.mem is required -- the TB owns the data memory.
 //
-// Single-shot compile + elaborate + run, pointing IMEM at myprog.mem:
+// Waveform GUI (what you want): -gui opens SimVision. -access +rwc is
+// what makes every wire draggable. The TB writes waves.shm as it runs
+// and $stop's at the end so the window does not vanish.
 //
-//   xrun -sv -timescale 1ns/1ps -access +rwc -l CPU_TOP_tb.log \
-//        -defparam CPU_TOP_tb.dut.IMEM.MEM_FILE=\"myprog.mem\" \
+//   xrun -sv -timescale 1ns/1ps -access +rwc -gui -l CPU_TOP_tb.log \
+//        -defparam CPU_TOP_tb.dut.IMEM.MEM_FILE=\"imem.mem\" \
 //        ../rtl/PIPELINE_REG_STRUCT_PKG.sv \
 //        ../rtl/2_To_1_MUX.sv \
 //        ../rtl/4_TO_1_MUX.sv \
@@ -368,11 +468,19 @@ endmodule
 //        ../rtl/CPU_TOP.sv \
 //        CPU_TOP_tb.sv
 //
-//   -sv              treat inputs as SystemVerilog
-//   -access +rwc     required: the TB probes dut.PC / dut.REG_FILE.registers
-//   -l <file>        tee the transcript to a log you can grep for FAIL
-//   -clean           add this to force a full rebuild if a stale INCA_libs
-//                    directory is giving you confusing errors
+// In SimVision:
+//   1. Design Browser (left) -> CPU_TOP_tb -> dut
+//   2. Drag CLK, RST, PC, ir, DATA_ADDRESS, DATA_IN, DATA_OUT,
+//      IOBUS_WE, IOBUS_RDEN onto the waveform window
+//   3. Open dut.REG_FILE.registers and drag x29 / x30 / x31
+//   4. Click in the wave window for the value at that time
+//
+// If the GUI is already closed and you just want to reopen the dump:
+//   simvision waves.shm &
+//
+//   -access +rwc     required: probes AND drag-and-drop in SimVision
+//   -gui             bring SimVision up with the run
+//   -l <file>        grep the log for SELFTEST / FAIL
 //
 // Elaborate only:
 //
@@ -386,15 +494,6 @@ endmodule
 //        ../rtl/Forwarding_Unit.sv ../rtl/HazardUnit.sv \
 //        ../rtl/CPU_TOP.sv CPU_TOP_tb.sv
 //
-// Waveforms in SimVision:
-//   Uncomment the $shm_open / $shm_probe block above, rerun, then:
-//        simvision waves.shm &
-//
-//   Or launch interactively:
-//   xrun -sv -access +rwc -gui -defparam CPU_TOP_tb.dut.IMEM.MEM_FILE=\"myprog.mem\" \
-//        <same file list as above>
-//
 // Quick pass/fail:
-//   grep -c FAIL CPU_TOP_tb.log
-//   echo $?            # 0 from xrun means no $fatal
+//   grep -E "SELFTEST PASS|SELFTEST FAIL|FAIL \\[TIME-5\\]" CPU_TOP_tb.log
 // ---------------------------------------------------------------------------
