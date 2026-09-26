@@ -298,8 +298,7 @@ module CPU_TOP_tb;
 
     task automatic apply_reset();
         int i;
-        RST     = 1'b1;
-        DATA_IN = 32'h0;
+        RST = 1'b1;
 
         for (i = 0; i < RESET_CYCLES; i++) begin
             @(posedge CLK);
@@ -373,7 +372,6 @@ module CPU_TOP_tb;
         parked        = 1'b0;
         timed_out     = 1'b0;
         cycle_i       = 0;
-        DATA_IN       = 32'h0;
 
         apply_reset();
 
