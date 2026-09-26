@@ -440,33 +440,18 @@ module CPU_TOP_tb;
 endmodule
 
 // ---------------------------------------------------------------------------
-// XCELIUM RUN NOTES  (run from tb/ on nanoHUB)
+// XCELIUM RUN NOTES  (run from the repo root on nanoHUB)
 // ---------------------------------------------------------------------------
-// Put imem.mem (assembled rv32i_selftest.S) in the directory you launch
-// xrun from. No dmem.mem is required -- the TB owns the data memory.
+// Copy sw/imem.mem into the directory you launch xrun from, or point
+// MEM_FILE at ../sw/imem.mem. No dmem.mem is required.
 //
-// Waveform GUI (what you want): -gui opens SimVision. -access +rwc is
-// what makes every wire draggable. The TB writes waves.shm as it runs
-// and $stop's at the end so the window does not vanish.
+// Paste this block as-is. Every path is real -- there is no "same file
+// list as the footer" placeholder.
 //
 //   xrun -sv -timescale 1ns/1ps -access +rwc -gui -l CPU_TOP_tb.log \
-//        -defparam CPU_TOP_tb.dut.IMEM.MEM_FILE=\"imem.mem\" \
-//        ../rtl/PIPELINE_REG_STRUCT_PKG.sv \
-//        ../rtl/2_To_1_MUX.sv \
-//        ../rtl/4_TO_1_MUX.sv \
-//        ../rtl/ALU.sv \
-//        ../rtl/Branch_Condition_Generator.sv \
-//        ../rtl/Program_Counter.sv \
-//        ../rtl/IMEM.sv \
-//        ../rtl/Reg_File.sv \
-//        ../rtl/Control_Unit_Decoder.sv \
-//        ../rtl/Immediate_Generator.sv \
-//        ../rtl/PC_Decoder.sv \
-//        ../rtl/Jump_Branch_Address_Generator.sv \
-//        ../rtl/Forwarding_Unit.sv \
-//        ../rtl/HazardUnit.sv \
-//        ../rtl/CPU_TOP.sv \
-//        CPU_TOP_tb.sv
+//        -defparam CPU_TOP_tb.dut.IMEM.MEM_FILE=\"sw/imem.mem\" \
+//        -f scripts/cpu_list.f \
+//        tb/CPU_TOP_tb.sv
 //
 // In SimVision:
 //   1. Design Browser (left) -> CPU_TOP_tb -> dut
@@ -484,15 +469,7 @@ endmodule
 //
 // Elaborate only:
 //
-//   xrun -sv -elaborate \
-//        ../rtl/PIPELINE_REG_STRUCT_PKG.sv \
-//        ../rtl/2_To_1_MUX.sv ../rtl/4_TO_1_MUX.sv ../rtl/ALU.sv \
-//        ../rtl/Branch_Condition_Generator.sv ../rtl/Program_Counter.sv \
-//        ../rtl/IMEM.sv ../rtl/Reg_File.sv ../rtl/Control_Unit_Decoder.sv \
-//        ../rtl/Immediate_Generator.sv ../rtl/PC_Decoder.sv \
-//        ../rtl/Jump_Branch_Address_Generator.sv \
-//        ../rtl/Forwarding_Unit.sv ../rtl/HazardUnit.sv \
-//        ../rtl/CPU_TOP.sv CPU_TOP_tb.sv
+//   xrun -sv -elaborate -f scripts/cpu_list.f tb/CPU_TOP_tb.sv
 //
 // Quick pass/fail:
 //   grep -E "SELFTEST PASS|SELFTEST FAIL|FAIL \\[TIME-5\\]" CPU_TOP_tb.log
