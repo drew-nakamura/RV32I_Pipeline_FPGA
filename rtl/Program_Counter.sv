@@ -1,4 +1,12 @@
-
+//============================================================
+// Module: Program Counter
+// Author: Drew Nakamura
+// Project: 5_Stage_Pipeline
+//
+// Description:
+//   Muxes the next PC from PC+4, jalr, branch, or jal.
+//   Reset forces PC to 0.
+//============================================================
 // Program_Counter (
 //     .reset(),
 //     .PC_SEL(),

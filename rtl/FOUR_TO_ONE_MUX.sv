@@ -1,17 +1,11 @@
 `timescale 1ns / 1ps
 //============================================================
-// Module: Four To One Mux
+// Module: FOUR_TO_ONE_MUX (Four To One Multiplexer)
 // Author: Drew Nakamura
 // Project: 5_Stage_Pipeline
 //
 // Description:
-//   Takes in 4 32 bit values and a single 2 bit vlaue. Uses
-//   the 2 bit value to determine whihc of the 4 32 bit values
-//   is output.
-//
-// Notes:
-//   - Educational use only
-//   - Not an original architecture design
+//   Picks A, B, C, or D from a 2-bit SEL.
 //============================================================
 //FOUR_TO_ONE_MUX(
 //    .A(),

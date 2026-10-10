@@ -1,5 +1,13 @@
 `timescale 1ns / 1ps
-
+//============================================================
+// Module: PC Decoder
+// Author: Drew Nakamura
+// Project: 5_Stage_Pipeline
+//
+// Description:
+//   Uses jump/branch flags plus br_eq / br_lt / br_ltu to
+//   pick the next PC: PC+4, jalr, branch, or jal.
+//============================================================
 // PC_Decoder (
 //     .br_lt(),
 //     .br_eq(),
@@ -40,7 +48,7 @@ module PC_Decoder(
             end
             3'b010: PC_SEL = pc_JAL;
             3'b001: PC_SEL = pc_JALR;
-        default: PC_SEL = 'X;
+        default: PC_SEL = 2'b00;
         endcase
     end
 endmodule

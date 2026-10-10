@@ -1,20 +1,13 @@
 `timescale 1ns / 1ps
 //============================================================
-// Module: Arithmatic Logical Unit
+// Module: ALU
 // Author: Drew Nakamura
 // Project: 5_Stage_Pipeline
 //
 // Description:
-//   The Arithmatic Logical Unit is designed to handle most of the 
-//   bitwise modifications such
-//   as addition, subtraction, or, and, exclusive or, shirft right 
-//   logical, shift left logical shift left logical, shift right arthmatic, 
-//   set if less than, set if less than unsigned, and finally .
-//
-// Notes:
-//   - Educational use only
-//   - Not an original architecture design
-//=============================
+//   Does the EX-stage math: add, sub, and, or, xor, shifts,
+//   and set-less-than. Also passes srcA through for LUI.
+//============================================================
 //ALU(
 //    .srcA(),
 //    .srcB(),

@@ -1,30 +1,12 @@
 `timescale 1ns / 1ps
 //============================================================
-// Module: IMMEDIATE GENERATOR
+// Module: Immediate Generator
 // Author: Drew Nakamura
-// Project: OTTER_MULTICYCLE_CONTROLLER
+// Project: 5_Stage_Pipeline
 //
 // Description:
-//   The immediate generator creates the immediate values for the
-//   different type instructions. For example, the U_Type immediate
-//   is shifted up 12 bits in this module.
-//
-// Context:
-//   This module was implemented as part of coursework for
-//   CPE 233 at California Polytechnic State University
-//   (Cal Poly San Luis Obispo).
-//
-//   The overall processor architecture is based on the
-//   "OTTER" RISC-V microcontroller developed for the course
-//   by Cal Poly faculty.
-//
-//   This file contains my own implementation of the module
-//   based on the provided specifications.
-//   This is for my first implimentation of the Otter Spring 2026
-//
-// Notes:
-//   - Educational use only
-//   - Not an original architecture design
+//   Unpacks instruction bits into the five RISC-V immediates:
+//   I, S, B, U, and J. U-type is already shifted up 12 bits.
 //============================================================
 //Immediate_Generator (
 //    .imm(),

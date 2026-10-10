@@ -1,6 +1,13 @@
 `timescale 1ns / 1ps
-
-
+//============================================================
+// Module: Control Unit Decoder
+// Author: Drew Nakamura
+// Project: 5_Stage_Pipeline
+//
+// Description:
+//   Reads opcode, func3, and ir30 and drives the pipeline
+//   control signals (ALU op, mux selects, WE/RDEN, jump/branch).
+//============================================================
 // module Control_Unit_Decoder(
 //     .opcode(),
 //     .func3(),
@@ -14,10 +21,11 @@
 //     .jalr_i(),
 //     .srcB_SEL(),
 //     .RF_SEL(),
-//     .ALU_FUN()
+//     .ALU_FUN(),
+//     .rs1_used(),
+//     .rs2_used()
 // );
 
-import CPU_pkg::*;
 module Control_Unit_Decoder(
     input logic [6:0] opcode,
     input logic [2:0] func3,
@@ -27,6 +35,8 @@ module Control_Unit_Decoder(
     output logic [3:0] ALU_FUN,
     output logic rs1_used, rs2_used
     );
+
+    import CPU_pkg::*;
 
     always_comb begin
         //===Base Cases===
@@ -51,7 +61,7 @@ module Control_Unit_Decoder(
             RF_WE = 1'b1;
         end
             
-        7'b0010111://==U-Type -> AUPIC====================
+        7'b0010111://==U-Type -> AUIPC====================
         begin
             srcA_SEL =  srca_U_TYPE;
             srcB_SEL = srcb_PC;
@@ -90,7 +100,7 @@ module Control_Unit_Decoder(
             rs1_used = 1'b1;
         end
         
-        7'b0010011://==I-Type -> ALU STUFF=====================
+        7'b0010011://==I-Type ALU=====================
         begin
             //Base case covers ADDI,
             ALU_FUN = alu_ADD;

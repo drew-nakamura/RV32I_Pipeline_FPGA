@@ -1,12 +1,23 @@
 `timescale 1ns / 1ps
+//============================================================
+// Module: CPU_TOP
+// Author: Drew Nakamura
+// Project: 5_Stage_Pipeline
+//
+// Description:
+//   Top of the 5-stage RV32I pipeline (IF/ID/EX/MEM/WB).
+//   Wires the stages together and talks to data memory
+//   through DATA_IN / DATA_OUT / IOBUS_RDEN / IOBUS_WE.
+//============================================================
 // CPU_TOP (
 //     .RST(),
 //     .CLK(),
 //     .DATA_IN(),
+//     .mem_data(),
 //     .DATA_ADDRESS(),
 //     .DATA_OUT(),
-//     .RDEN(),
-//     .WE()
+//     .IOBUS_RDEN(),
+//     .IOBUS_WE()
 //     );
 import CPU_pkg::*;
 
@@ -35,9 +46,6 @@ module CPU_TOP(
     //====ENUMS=====
     instr_name_e instruction;
 
-    //===CPU WIRE/BUFFERS===
-    logic reset;
-    
     //===PC Wires===
     logic [31:0] PC;
 
@@ -67,8 +75,8 @@ module CPU_TOP(
     logic [31:0] U_Type, I_Type, S_Type, B_Type, J_Type;
 
     //===ALU WIRES====
-    logic [31:0] srcA, srcB, ALU_out;
-    logic [31:0] srcA_REAL, srcB_REAL;
+    logic [31:0] srcA, srcB;
+    logic [31:0] real_rs1, real_rs2;
     logic [31:0] ALU_result;
 
     //===HAZARD WIRES===
@@ -79,8 +87,8 @@ module CPU_TOP(
     //========== FETCH ===============================
     Program_Counter Program_Counter(
         .reset(RST),
-        .PC_SEL(PC_SEL), //Comes from EX stage
-        .PC_PLUS_FOUR(PC_USED + 4),//smacked in from IMEM, as the latch will be the same as the insturciton
+        .PC_SEL(PC_SEL),
+        .PC_PLUS_FOUR(PC_USED + 4), // IMEM latch: PC+4 matches the instruction in ir
         .JALR_ADDR(jalr),
         .BRANCH_ADDR(branch),
         .JAL_ADDR(jal),
@@ -91,12 +99,14 @@ module CPU_TOP(
         .CLK(CLK),
         .PC(PC),
         .instruction(ir),
-        .PC_USED(PC_USED)
+        .PC_USED(PC_USED),
+        .STALL(FORW_STALL_IF_ID),
+        .FLUSH(Hazard_FLUSH_IF_ID)
     );
     assign instruction = decode_instr_name(ir);
 
     always_comb begin
-        if_id_d.PC = PC;// latch will aligh with ir, if PC_USEd is dont then it will be a cycle behind
+        if_id_d.PC = PC_USED; // must use latched PC so IF/ID PC matches ir
         if_id_d.ir = ir;
         if_id_d.instruction = instruction;
     end
@@ -105,7 +115,8 @@ module CPU_TOP(
         if (RST || Hazard_FLUSH_IF_ID) begin
             if_id_q <= '0;
         end
-        else if (FORW_STALL_IF_ID) begin
+        else 
+        if (FORW_STALL_IF_ID) begin
             if_id_q <= if_id_q;
         end
         else begin
@@ -114,12 +125,12 @@ module CPU_TOP(
     end
     //========== DECODE ===============================
     
-   //ASSUME ALL REGISTERS OTHER THAN x0 are JUNK AT START!!!!
+    // x0 is 0; every other register starts as junk
     REG_FILE REG_FILE(
         .CLK(CLK),
         .en(ex_mem_q.RF_WE),      
-        .adr1(ir[19:15]),   
-        .adr2(ir[24:20]),    
+        .adr1(if_id_q.ir[19:15]),   
+        .adr2(if_id_q.ir[24:20]),    
         .w_adr(ex_mem_q.reg_write_addr),  
         .w_data(write_data),  
         .rs1(rs1),  //ID
@@ -127,9 +138,9 @@ module CPU_TOP(
     );
 
     Control_Unit_Decoder Control_Unit_Decoder(
-        .opcode(ir[6:0]),
-        .func3(ir[14:12]),
-        .ir30(ir[30]),
+        .opcode(if_id_q.ir[6:0]),
+        .func3(if_id_q.ir[14:12]),
+        .ir30(if_id_q.ir[30]),
         .srcA_SEL(srcA_SEL),
         .RF_WE(RF_WE),
         .memWE(memWE),
@@ -145,7 +156,7 @@ module CPU_TOP(
     );
 
     Immediate_Generator Immediate_Generator(
-        .imm(ir[31:7]),
+        .imm(if_id_q.ir[31:7]),
         .U_TYPE(U_Type),
         .I_TYPE(I_Type),
         .S_TYPE(S_Type),
@@ -155,7 +166,7 @@ module CPU_TOP(
 
     always_comb begin
         id_ex_d.PC = if_id_q.PC;
-        id_ex_d.func3 = ir[14:12];
+        id_ex_d.func3 = if_id_q.ir[14:12];
         id_ex_d.srcA_SEL = srcA_SEL;
         id_ex_d.RF_WE = RF_WE;
         id_ex_d.memWE = memWE;
@@ -163,19 +174,19 @@ module CPU_TOP(
         id_ex_d.branch_i = branch_i;
         id_ex_d.jal_i = jal_i;
         id_ex_d.jalr_i = jalr_i;
-        id_ex_d.mem_sign = ir[14];
-        id_ex_d.mem_size = ir[13:12];
+        id_ex_d.mem_sign = if_id_q.ir[14];
+        id_ex_d.mem_size = if_id_q.ir[13:12];
         id_ex_d.srcB_SEL = srcB_SEL;
         id_ex_d.RF_SEL = RF_SEL;
-        id_ex_d.reg_write_addr = ir[11:7];
+        id_ex_d.reg_write_addr = if_id_q.ir[11:7];
         id_ex_d.ALU_FUN = ALU_FUN;
         id_ex_d.U_Type = U_Type;
         id_ex_d.I_Type = I_Type;
         id_ex_d.S_Type = S_Type;
         id_ex_d.B_Type = B_Type;
         id_ex_d.J_Type = J_Type;
-        id_ex_d.rs1_addr = ir[19:15];
-        id_ex_d.rs2_addr = ir[24:20];
+        id_ex_d.rs1_addr = if_id_q.ir[19:15];
+        id_ex_d.rs2_addr = if_id_q.ir[24:20];
         id_ex_d.rs1 = rs1;
         id_ex_d.rs2 = rs2;
         id_ex_d.rs1_used = rs1_used;
@@ -188,12 +199,38 @@ module CPU_TOP(
             id_ex_q <= '0;
         end
         else if (FORW_STALL_ID_EX) begin
-            id_ex_q <= id_ex_q;
+            id_ex_q.PC <= id_ex_q.PC;
+            id_ex_q.func3 <= id_ex_q.func3;
+            id_ex_q.srcA_SEL <= id_ex_q.srcA_SEL;
+            id_ex_q.RF_WE <= id_ex_q.RF_WE;
+            id_ex_q.memWE <= id_ex_q.memWE;
+            id_ex_q.memRDEN <= id_ex_q.memRDEN;
+            id_ex_q.branch_i <= id_ex_q.branch_i;
+            id_ex_q.jal_i <= id_ex_q.jal_i;
+            id_ex_q.jalr_i <= id_ex_q.jalr_i;
+            id_ex_q.mem_sign <= id_ex_q.mem_sign;
+            id_ex_q.mem_size <= id_ex_q.mem_size;
+            id_ex_q.srcB_SEL <= id_ex_q.srcB_SEL;
+            id_ex_q.RF_SEL <= id_ex_q.RF_SEL;
+            id_ex_q.reg_write_addr <= id_ex_q.reg_write_addr;
+            id_ex_q.ALU_FUN <= id_ex_q.ALU_FUN;
+            id_ex_q.U_Type <= id_ex_q.U_Type;
+            id_ex_q.I_Type <= id_ex_q.I_Type;
+            id_ex_q.S_Type <= id_ex_q.S_Type;
+            id_ex_q.B_Type <= id_ex_q.B_Type;
+            id_ex_q.J_Type <= id_ex_q.J_Type;
+            id_ex_q.rs1_addr <= id_ex_q.rs1_addr;
+            id_ex_q.rs2_addr <= id_ex_q.rs2_addr;
+            id_ex_q.rs1_used <= id_ex_q.rs1_used;
+            id_ex_q.rs2_used <= id_ex_q.rs2_used;
+            id_ex_q.instruction <= id_ex_q.instruction;
+
+            // Stall + WB forward: capture the forwarded rs values into ID/EX
+            id_ex_q.rs1 <= real_rs1;
+            id_ex_q.rs2 <= real_rs2;
         end
         else if (FORW_STALL_ID_EX) begin
-            //If we dont stall EX but ID stalls, this shouldnt really get anything.
-            //This should really do anything bad, but if some weird stuff happens its probably from this
-            id_ex_q <= '0; //
+            id_ex_q <= '0;
         end
         else begin
             id_ex_q <= id_ex_d;
@@ -202,8 +239,8 @@ module CPU_TOP(
 
 //=========EX STAGE ========================
     Branch_Condition_Generator Branch_Condition_Generator(
-        .rs1(srcA_REAL),
-        .rs2(srcB_REAL),
+        .rs1(real_rs1),
+        .rs2(real_rs2),
         .br_lt(br_lt),
         .br_eq(br_eq),
         .br_ltu(br_ltu)
@@ -225,49 +262,50 @@ module CPU_TOP(
         .J_Type(id_ex_q.J_Type),
         .B_Type(id_ex_q.B_Type),
         .I_Type(id_ex_q.I_Type),
-        .rs1(srcA_REAL), //GET THE FORWARDED RS1 
+        .rs1(real_rs1), // forwarded rs1
         .jalr(jalr),
         .branch(branch),
         .jal(jal)
     );
 
+    FOUR_TO_ONE_MUX Forwarding_srcA_MUX(
+       .A(id_ex_q.rs1),
+       .B(ex_mem_q.ALU_result),
+       .C(mem_wb_q.REG_write_data),
+       .D('0),
+       .SEL(srcA_FORWARD_SEL),
+       .OUT(real_rs1)
+    );
+
     TWO_TO_ONE_MUX srcA_MUX(
-        .A(id_ex_q.rs1),
+        .A(real_rs1),
         .B(id_ex_q.U_Type),
         .SEL(id_ex_q.srcA_SEL),
         .OUT(srcA)
     );
 
-    FOUR_TO_ONE_MUX Forwarding_srcA_MUX(
-       .A(srcA),
+   FOUR_TO_ONE_MUX Forwarding_srcB_MUX(
+       .A(id_ex_q.rs2),
        .B(ex_mem_q.ALU_result),
        .C(mem_wb_q.REG_write_data),
        .D('0),
-       .SEL(srcA_FORWARD_SEL),
-       .OUT(srcA_REAL)
+       .SEL(srcB_FORWARD_SEL),
+       .OUT(real_rs2)
     );
 
     FOUR_TO_ONE_MUX srcB_MUX(
-        .A(id_ex_q.rs2),
+        .A(real_rs2),
         .B(id_ex_q.I_Type),
         .C(id_ex_q.S_Type),
         .D(id_ex_q.PC),
         .SEL(id_ex_q.srcB_SEL),
         .OUT(srcB)
    );
-
-   FOUR_TO_ONE_MUX Forwarding_srcB_MUX(
-       .A(srcB),
-       .B(ex_mem_q.ALU_result),
-       .C(mem_wb_q.REG_write_data),
-       .D('0),
-       .SEL(srcB_FORWARD_SEL),
-       .OUT(srcB_REAL)
-    );
+    
 
    ALU Arithmatic_Logical_Unit(
-        .srcA(srcA_REAL),
-        .srcB(srcB_REAL),
+        .srcA(srcA),
+        .srcB(srcB),
         .alu_func(id_ex_q.ALU_FUN),
         .result(ALU_result)
    );
@@ -278,14 +316,16 @@ module CPU_TOP(
         ex_mem_d.RF_SEL = id_ex_q.RF_SEL;
         ex_mem_d.reg_write_addr = id_ex_q.reg_write_addr;
         ex_mem_d.ALU_result = ALU_result;
-        //FUCK IT LETS DO IT, data is caught by the psoedge to read/write dmem, as data should be ready by the ned of EX
+        // Address / store data ready by end of EX; DMEM samples on posedge
         ex_mem_d.mem_size = id_ex_q.mem_size;
         ex_mem_d.mem_sign = id_ex_q.mem_sign;
         ex_mem_d.memRDEN = id_ex_q.memRDEN;
         ex_mem_d.memWE = id_ex_q.memWE;
+        ex_mem_d.DATA_IN = DATA_IN;
         mem_data = {id_ex_q.mem_size, id_ex_q.mem_sign};
         DATA_ADDRESS = ALU_result;
-        DATA_OUT = srcB_REAL; //Shold only be valid data when rs2 is used... forwarded or not... but defiently could be buggy so!!!!!!!
+        DATA_OUT = real_rs2;
+
         IOBUS_RDEN = id_ex_q.memRDEN;
         IOBUS_WE = id_ex_q.memWE;
         ex_mem_d.instruction = id_ex_q.instruction;
@@ -296,29 +336,15 @@ module CPU_TOP(
             ex_mem_q <= '0;
         end
         else if (FORW_FLUSH_EX_MEM) begin
-            //Like the earlier one, if EX stalls then mem shouldnt really update, 
-            // and i dont really wanna add a valid bit for this so we just gonna 
-            // make it 0.
+            // Load-use: squash the EX/MEM write instead of adding a valid bit
             ex_mem_q <= '0;
         end else begin
             ex_mem_q <= ex_mem_d;
         end
     end
-   //===Memory Stage====
-   //Simialr to the IMEM, vaddress, and signals will be waiting due to
-    //the BRAM sync read, so this stage is just a buffer in here.
-    //Nothing combinational realy happens in this stage, 
-    //The values are settled in EX/MEm and will read/wrtie on this posedge
-  
 
     always_comb begin
-        mem_wb_d.PC = ex_mem_q.PC;
         mem_wb_d.RF_WE = ex_mem_q.RF_WE;
-        mem_wb_d.memWE = ex_mem_q.memWE;
-        mem_wb_d.memRDEN = ex_mem_q.memRDEN;
-        mem_wb_d.mem_sign = ex_mem_q.mem_sign;
-        mem_wb_d.mem_size = ex_mem_q.mem_size;
-        mem_wb_d.RF_SEL = ex_mem_q.RF_SEL;
         mem_wb_d.reg_write_addr = ex_mem_q.reg_write_addr;
         mem_wb_d.instruction = ex_mem_q.instruction;
         mem_wb_d.REG_write_data = write_data;
@@ -334,12 +360,11 @@ module CPU_TOP(
     end
 
     //===Write back stage====
-
-    //Same thing as DMEM, this data should be ready by pos edge trasnition into WB stage
+    // Write data is ready on the posedge into WB
     FOUR_TO_ONE_MUX reg_MUX(
         .A(ex_mem_q.PC + 4),
         .B('X),
-        .C(DATA_IN), // should have come back from mem stage
+        .C(ex_mem_q.DATA_IN), // load data from MEM
         .D(ex_mem_q.ALU_result),
         .SEL(ex_mem_q.RF_SEL),
         .OUT(write_data)
@@ -355,25 +380,21 @@ module CPU_TOP(
         .WB_REG_WRITE_ADDR(mem_wb_q.reg_write_addr),
         .MEM_REG_WE(ex_mem_q.RF_WE),
         .MEM_DMEM_RDEN(ex_mem_q.memRDEN),
-        .WB_DMEM_RDEN(mem_wb_q.memRDEN),
         .WB_REG_WE(mem_wb_q.RF_WE),
-        .FLUSH_EX_MEM(FORW_FLUSH_EX_MEM),//THis flushes the next write of data, not what is currently in EX/MEM reg
+        .FLUSH_EX_MEM(FORW_FLUSH_EX_MEM), // kills the next EX/MEM write, not the current flop
         .STALL_IF_ID(FORW_STALL_IF_ID),
         .STALL_ID_EX(FORW_STALL_ID_EX),
         .srcA_FORWARD_SEL(srcA_FORWARD_SEL),
         .srcB_FORWARD_SEL(srcB_FORWARD_SEL)
     );
-    //If custom insturciton is added, ensure we dont accidently forward/hazard because of rs1 rs2 stuff.
-
-    //And now thinking about the x0 thing, we could literally ignore the latency thing if its written to x0,
-    // and with x0 commonly being used to do nothing or some other sutff, this could portentialy save many
-    // clock cycles. SO note to self to fix this later!
+    // New opcodes must set rs1_used / rs2_used or forwarding will fire on unused fields.
 
     HazardUnit Hazard_Unit(
         .branch_i(id_ex_q.branch_i),
         .jal_i(id_ex_q.jal_i),
         .jalr_i(id_ex_q.jalr_i),
         .PC_SEL(PC_SEL),
+        .IF_ID_Stall(FORW_STALL_IF_ID),
         .Hazard_FLUSH_IF_ID(Hazard_FLUSH_IF_ID),
         .Hazard_FLUSH_ID_EX(Hazard_FLUSH_ID_EX)
     );

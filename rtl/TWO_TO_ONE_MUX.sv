@@ -1,16 +1,11 @@
 `timescale 1ns / 1ps
 //============================================================
-// Module: 2_TO_1_MUX
+// Module: 2-to-1 Mux
 // Author: Drew Nakamura
 // Project: 5_Stage_Pipeline
 //
 // Description:
-//   Takes in two 32 bit balues and outputs one depending on
-//   the input SEL.
-//
-// Notes:
-//   - Educational use only
-//   - Not an original architecture design
+//   Picks A or B from a 1-bit SEL.
 //============================================================
 //TWO_TO_ONE_MUX (
 //    .A(),

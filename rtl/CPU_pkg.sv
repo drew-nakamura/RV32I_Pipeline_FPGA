@@ -1,4 +1,13 @@
 `timescale 1ns / 1ps
+//============================================================
+// Package: CPU_pkg
+// Author: Drew Nakamura
+// Project: 5_Stage_Pipeline
+//
+// Description:
+//   Shared enums and pipeline-register structs used by the
+//   CPU (ALU ops, PC select, instruction names, IF/ID/EX/MEM/WB).
+//============================================================
 package CPU_pkg;
 
 //======ENUMS=======
@@ -106,17 +115,12 @@ typedef struct packed {
     logic [1:0] RF_SEL;
     logic [4:0] reg_write_addr;
     logic [31:0] ALU_result;
+    logic [31:0] DATA_IN;
     instr_name_e instruction;
 } ex_mem_t;
 
 typedef struct packed {
-    logic [31:0] PC;
     logic RF_WE;
-    logic memWE;
-    logic memRDEN;
-    logic mem_sign;
-    logic [1:0] mem_size;
-    logic [1:0] RF_SEL;
     logic [4:0] reg_write_addr;
     logic [31:0] REG_write_data;
     instr_name_e instruction;

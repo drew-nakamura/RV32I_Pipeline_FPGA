@@ -1,18 +1,13 @@
 `timescale 1ns / 1ps
 //============================================================
-// Module: Branch Address Generator
+// Module: Jump / Branch Address Generator
 // Author: Drew Nakamura
-// Project:  OTTER_multi_Cycle
+// Project: 5_Stage_Pipeline
 //
 // Description:
-//   The branch address generator takes in PC, immediates made by
-//   immediate generator, and rs1 to computer possible branch values
-//   for the PC Next.
-//
-// Notes:
-//   - Educational use only
-//   - Not an original architecture design
-//=============================
+//   Builds the three possible next-PC targets: jal = PC+J,
+//   branch = PC+B, and jalr = (rs1+I) with bit 0 cleared.
+//============================================================
 //Jump_Branch_Address_Generator (
 //    .PC(),
 //    .J_Type(),
@@ -29,12 +24,7 @@ module Jump_Branch_Address_Generator(
     output logic [31:0] jalr, branch, jal
     );
     
-    assign jalr = (I_Type + rs1) & 32'hFFFFFFFE; 
-        //previously had the mask, but while reading the ISA it states
-        //"Clearing the least-significant bit when calculating the 
-        //JALR target address both simplifies the hardware slightly 
-        //and allows the low bit of function pointers to be used to 
-        //store auxiliary information" so T added it.
+    assign jalr = (I_Type + rs1) & 32'hFFFFFFFE; // ISA: jalr target LSB must be 0
     assign branch = PC + B_Type;
     assign jal = PC + J_Type;
 endmodule

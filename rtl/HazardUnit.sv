@@ -1,18 +1,41 @@
 `timescale 1ns / 1ps
+//============================================================
+// Module: Hazard Unit
+// Author: Drew Nakamura
+// Project: 5_Stage_Pipeline
+//
+// Description:
+//   Flushes IF/ID and ID/EX when EX takes a jal, jalr, or
+//   taken branch. Does nothing while the pipeline is stalled.
+//============================================================
+// HazardUnit (
+//     .branch_i(),
+//     .jal_i(),
+//     .jalr_i(),
+//     .PC_SEL(),
+//     .IF_ID_Stall(),
+//     .Hazard_FLUSH_IF_ID(),
+//     .Hazard_FLUSH_ID_EX()
+//     );
 
 module HazardUnit(
     input logic branch_i,
     input logic jal_i,
     input logic jalr_i,
     input logic [1:0] PC_SEL,
+    input logic IF_ID_Stall,
     output logic Hazard_FLUSH_IF_ID, 
     output logic Hazard_FLUSH_ID_EX
     );
-    //Lowkey a little confusing, but these signals will be sitting and executed
-    // on the posedge, so it will prevent its update not remove the current stuff.
+    // Flush is sampled on posedge: it blocks the next register update.
+    // It does not erase the instruction already sitting in the flop.
 
     always_comb begin
-        if (jal_i || jalr_i) begin
+        if(IF_ID_Stall) begin
+            Hazard_FLUSH_IF_ID = 0;
+            Hazard_FLUSH_ID_EX = 0;
+        end
+        else if (jal_i || jalr_i) begin
             Hazard_FLUSH_IF_ID = 1;
             Hazard_FLUSH_ID_EX = 1;
         end

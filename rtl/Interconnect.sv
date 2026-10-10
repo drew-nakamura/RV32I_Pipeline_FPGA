@@ -1,9 +1,30 @@
 `timescale 1ns / 1ps
+//============================================================
+// Module: Interconnect
+// Author: Drew Nakamura
+// Project: 5_Stage_Pipeline
+//
+// Description:
+//   Splits a CPU address into DMEM or MMIO. Maps switches,
+//   buttons, LEDs, and the seven-seg display.
+//============================================================
+// Interconnect (
+//     .address(),
+//     .WE(),
+//     .RDEN(),
+//     .DMEM_DATA(),
+//     .SWITCHES(),
+//     .BUTTONS(),
+//     .DMEM_RDEN(),
+//     .DMEM_WE(),
+//     .LEDS_WE(),
+//     .SSEG_WE(),
+//     .IOBUS_in()
+//     );
 
 module Interconnect(
     input logic [31:0] address,
     input logic WE,
-    input logic [31:0] CPU_DATA,
     input logic RDEN,
     input logic [31:0] DMEM_DATA,
     input logic [31:0] SWITCHES,
@@ -31,17 +52,14 @@ module Interconnect(
                 32'h11000080: if(RDEN) IOBUS_in = BUTTONS; //BUTTONS
             endcase
         end else
-        if(address > 32'h0009FFF) begin
-            //nothing happens yet... reserved space for other stuff.
-        end else
-        if(address > 32'h7FFF)begin
+        if(address >= 32'h00003F60)begin
             DMEM_RDEN = RDEN;
             DMEM_WE = WE;
             if(RDEN) begin
                 IOBUS_in = DMEM_DATA;
             end
         end else begin
-            //Nothing happens this is IMEM.
+            // IMEM space: no data-bus action
         end
     end
 endmodule

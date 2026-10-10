@@ -1,20 +1,17 @@
 `timescale 1ns / 1ps
 //============================================================
-// Module: DRAN(Data Memory)
+// Module: DMEM (Data Memory)
 // Author: Drew Nakamura
 // Project: 5_Stage_Pipeline
 //
 // Description:
-//    CPU uses to store information 
-//    
-// 
-// Notes:
-//   - Educational use only
-//   - Not an original architecture design
-// Currently 8 KB of Ram, specially should be installed as BRAM on FPGA
+//   Data RAM for loads and stores (byte / half / word).
+//   Word index is taken from the address minus the DMEM base.
+//   
+// Notes: This module was heavily influence by the memory module
+//        written by the professors at Cal Poly SLO!
+//        Primarily written by J. Callenes and P. Hummel.
 //============================================================
-//WE should probably make sutffl ike address width auto calcualte based on ram size, rembeer to maunally change when we change stuff
-
 // DMEM(
 //     .CLK(),
 //     .WE(),
@@ -25,7 +22,7 @@
 //     .data_out()
 // );
 module DMEM #(
-    parameter string MEM_FILE = "dmem.mem"
+    parameter string MEM_FILE = "Test_All_dmem.mem"
     )
     (
     input logic CLK,
@@ -47,7 +44,6 @@ module DMEM #(
     (* ram_decomp = "power " *)
     logic [31:0] memory[0:2047];
 
-    //Read from loaded w_ramS file!!
     initial begin
         $readmemh(MEM_FILE, memory);
     end
@@ -56,11 +52,11 @@ module DMEM #(
     assign mem_sign = mem_data[0];
     assign byteOffset = address[1:0];
 
-    assign wordAddress = address[10:2]; // non word read
+    // Word index = (byte address - DMEM base 0x3F60) >> 2
+    assign wordAddress = (address - 32'h00003F60) >> 2;
 
     always_ff @(posedge CLK) begin
-        //=====================================WRITE=============
-        if (WE) begin     // write enable and valid address space
+        if (WE) begin
             case({mem_size, byteOffset})
                 4'b0000: memory[wordAddress][7:0]   <= data_in[7:0];     // sb at byte offsets
                 4'b0001: memory[wordAddress][15:8]  <= data_in[7:0];
@@ -70,13 +66,14 @@ module DMEM #(
                 4'b0101: memory[wordAddress][23:8]  <= data_in[15:0];
                 4'b0110: memory[wordAddress][31:16] <= data_in[15:0];
                 4'b1000: memory[wordAddress]        <= data_in;          // sw
+                default: ;//Unsupported size, byte offset combination
             endcase
         end
 
-        if (RDEN)// Read word from memory, to be edited based on load size
+        if (RDEN)
             memReadWord <= memory[wordAddress];
         end
-        // Change the data word into sized bytes and sign extend
+        // Size / sign-extend the registered word using mem_data + byte offset
         always_comb begin
         case({mem_sign, mem_size,byteOffset})
             5'b00011: data_out = {{24{memReadWord[31]}},memReadWord[31:24]};  // signed byte

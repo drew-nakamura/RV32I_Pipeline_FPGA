@@ -2,16 +2,11 @@
 //============================================================
 // Module: Branch Condition Generator
 // Author: Drew Nakamura
-// Project:  5_Stage_Pipeline
+// Project: 5_Stage_Pipeline
 //
 // Description:
-//   The branch condition generator is incharge of the arithamtic
-//   operation of comparing the two register values. Outputs the 
-//   condition of each one, meaning only one is output as true
-//
-// Notes:
-//   - Educational use only
-//   - Not an original architecture design
+//   Compares two register values and raises br_eq, signed
+//   br_lt, and unsigned br_ltu. Branch decode uses these flags.
 //============================================================
 //Branch_Condition_Generator (
 //    .rs1(),

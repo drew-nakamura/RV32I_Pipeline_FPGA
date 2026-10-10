@@ -1,34 +1,21 @@
-# Track only rtl/, sim/, tb/, README.md, and this file.
-# Vivado, Xcelium notes, Cursor, and generated files stay local.
+# Whitelist only: rtl/, docs/, README, AGENTS.md,
+# rv32i_selftest, imem.mem, and the Makefile.
 
-/*
+*
 !.gitignore
 !README.md
+
 !rtl/
 !rtl/**
-!sim/
-!sim/**
-!tb/
-!tb/**
-!scripts/
-!scripts/**
-!scripts/filelists/
-!scripts/filelists/**
+
 !docs/
 !docs/**
-!docs/images/
-!docs/images/**
-!build/
-!build/**
-!sw/
-!sw/**
 
-# Even inside allowed trees, skip generated simulation junk
-work/
-xsim.dir/
-transcript
-*.vcd
-*.log
-*.jou
-*.pb
-*.wdb
+!tb/
+!tb/AGENTS.md
+!tb/rv32i_selftest.S
+!tb/rv32i_selftest.s
+
+!sw/
+!sw/Makefile
+!sw/imem.mem

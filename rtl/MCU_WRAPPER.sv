@@ -1,30 +1,20 @@
 `timescale 1ns / 1ps
-/////////////////////////////////////////////////////////////////////////////
-// Company:
-// Engineer: J. Calllenes
-//           P. Hummel
-//           Additions made by: Drew Nakamura
+//============================================================
+// Module: MCU Wrapper
+// Author: Drew Nakamura
+// Project: 5_Stage_Pipeline
 //
-// Create Date: 01/20/2019 10:36:50 AM
-// Module Name: OTTER_Wrapper
-// Target Devices: OTTER MCU on Basys3
-// Description: OTTER_WRAPPER with Switches, LEDs, and 7-segment display
-//
-// Revision:
-// Revision 0.01 - File Created
-// Revision 0.02 - Updated MMIO Addresses, signal names
-// 
-// Drew's Addtion:
-// Removing IOBUS inout output, creating an interconnect module to
-// connect the SEV_SEG, LEDS, and Inputs from the memory mapped I/O.
-/////////////////////////////////////////////////////////////////////////////
+// Description:
+//   Wrapper for the 5-stage pipeline CPU and memory-mapped I/O.
+//   Connects the CPU to switches, LEDs, and the 7-segment display.
+//============================================================
 
 
 module MCU_WRAPPER(
    input logic CLK,
    input logic BTNC,
-   input logic BTNC2,
-   input logic[15:0] SWITCHES,
+   input logic [3:0] BTNS,
+   input logic [15:0] SWITCHES,
    output logic [15:0] LEDS,
    output logic [7:0] CATHODES,
    output logic [3:0] ANODES
@@ -35,11 +25,10 @@ module MCU_WRAPPER(
     localparam LEDS_AD    = 32'h11000020; //32'h11000020
     localparam SSEG_AD    = 32'h11000040; //32'h11000040
     localparam BUTTON_AD  = 32'h11000080; //32'h11000080
-    
-   // Signals for connecting OTTER_MCU to OTTER_wrapper /////////////////////
+    //=====MEMORY WIRES / CPU Wires=====
     logic [2:0] mem_data;
     logic [31:0] IOBUS_out, IOBUS_in, IOBUS_addr;
-    logic s_reset, IOBUS_RDEN, IOBUS_WE, Board_WE;
+    logic s_reset, IOBUS_RDEN, IOBUS_WE;
    
    // Registers for buffering outputs  /////////////////////////////////////
     logic [15:0] r_SSEG;
@@ -63,11 +52,10 @@ module MCU_WRAPPER(
    Interconnect Interconnect(
         .address(IOBUS_addr),
         .WE(IOBUS_WE),
-        .CPU_DATA(IOBUS_out),
         .RDEN(IOBUS_RDEN),
         .DMEM_DATA(DMEM_DATA),
         .SWITCHES({16'b0,SWITCHES}),
-        .BUTTONS({31'b0, BTNC2}),
+        .BUTTONS({28'b0, BTNS}),
         .DMEM_RDEN(DMEM_RDEN),
         .DMEM_WE(DMEM_WE),
         .LEDS_WE(LEDS_WE),
@@ -90,21 +78,22 @@ module MCU_WRAPPER(
        .DATA_IN(r_SSEG),
        .CLK(CLK),
        .s_reset(s_reset),
-       .MODE(1'b0),
+       .MODE(1'b1),
        .CATHODES(CATHODES),
        .ANODES(ANODES)
    );
                             
    // Clock Divider to create 50 MHz Clock //////////////////////////////////
    always_ff @(posedge CLK) begin
-        if(s_reset) clk_50 <= 1'b0;
+        if(BTNC) clk_50 <= 1'b0;
         else clk_50 <= ~clk_50;
+
    end
-   
+   always_ff @(negedge clk_50) s_reset <= BTNC;
    // Connect Signals ///////////////////////////////////////////////////////
-   assign s_reset = BTNC;
 
    always_ff @ (posedge clk_50) begin
+      
         if(LEDS_WE) LEDS   <= IOBUS_out[15:0];
         if(SSEG_WE) r_SSEG <= IOBUS_out[15:0];
     end
