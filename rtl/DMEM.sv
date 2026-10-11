@@ -53,7 +53,8 @@ module DMEM #(
     assign byteOffset = address[1:0];
 
     // Word index = (byte address - DMEM base 0x3F60) >> 2
-    assign wordAddress = (address - 32'h00003F60) >> 2;
+    assign wordAddress = (address - 32'h00003f60) >> 2;
+    //assign wordAddress = (address - 32'h00001000) >> 2;
 
     always_ff @(posedge CLK) begin
         if (WE) begin

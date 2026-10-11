@@ -52,7 +52,8 @@ module Interconnect(
                 32'h11000080: if(RDEN) IOBUS_in = BUTTONS; //BUTTONS
             endcase
         end else
-        if(address >= 32'h00003F60)begin
+        if(address >= 32'h00003f60)begin
+        //if(address >= 32'h00001000)begin
             DMEM_RDEN = RDEN;
             DMEM_WE = WE;
             if(RDEN) begin
