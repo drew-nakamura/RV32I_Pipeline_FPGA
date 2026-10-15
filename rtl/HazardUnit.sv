@@ -24,11 +24,12 @@ module HazardUnit(
     input logic jalr_i,
     input logic [1:0] PC_SEL,
     input logic IF_ID_Stall,
+    input logic trap,
     output logic Hazard_FLUSH_IF_ID, 
     output logic Hazard_FLUSH_ID_EX
     );
     // Flush is sampled on posedge: it blocks the next register update.
-    // It does not erase the instruction already sitting in the flop.
+    // It does not erase the instruction already sitting in the flop
 
     always_comb begin
         if(IF_ID_Stall) begin
@@ -40,6 +41,10 @@ module HazardUnit(
             Hazard_FLUSH_ID_EX = 1;
         end
         else if (branch_i && PC_SEL == 2'b10) begin
+            Hazard_FLUSH_IF_ID = 1;
+            Hazard_FLUSH_ID_EX = 1;
+        end
+        else if (trap) begin
             Hazard_FLUSH_IF_ID = 1;
             Hazard_FLUSH_ID_EX = 1;
         end

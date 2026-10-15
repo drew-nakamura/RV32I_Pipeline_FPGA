@@ -16,7 +16,7 @@ typedef enum logic [5:0] {
     LHU, ADDI, SLTI, SLTIU, ORI, XORI, ANDI, 
     SLLI, SRLI, SRAI, BEQ, BNE, BLT, BGE, BLTU,
     BGEU, SB, SH, SW, ADD, SUB, SLL, SLT, SLTU,
-    XOR, SRL, SRA, OR, AND, UNKNOWN
+    XOR, SRL, SRA, OR, AND, UNKNOWN, ECALL_EBREAK, FENCE
 } instr_name_e;
 
 typedef enum logic [2:0]{
@@ -102,6 +102,8 @@ typedef struct packed {
     logic [31:0] rs2;
     logic rs1_used;
     logic rs2_used;
+    logic trap;
+    logic ebrak;
     instr_name_e instruction;
 } id_ex_t;
 
@@ -116,6 +118,8 @@ typedef struct packed {
     logic [4:0] reg_write_addr;
     logic [31:0] ALU_result;
     logic [31:0] DATA_IN;
+    logic trap;
+    logic ebrak;
     instr_name_e instruction;
 } ex_mem_t;
 
@@ -123,6 +127,8 @@ typedef struct packed {
     logic RF_WE;
     logic [4:0] reg_write_addr;
     logic [31:0] REG_write_data;
+    logic trap;
+    logic ebrak;
     instr_name_e instruction;
 } mem_wb_t;
 
@@ -133,6 +139,7 @@ typedef struct packed {
         logic [6:0] funct7 = ir[31:25];
 
         case (opcode)
+            7'b0001111: decode_instr_name = FENCE;
             7'b0110111: decode_instr_name = LUI;
             7'b0010111: decode_instr_name = AUIPC;
             7'b1101111: decode_instr_name = JAL;
@@ -191,6 +198,11 @@ typedef struct packed {
                 3'b101: decode_instr_name = (funct7 == 7'b0100000) ? SRA : SRL;
                 3'b110: decode_instr_name = OR;
                 3'b111: decode_instr_name = AND;
+                default: decode_instr_name = UNKNOWN;
+            endcase
+
+            7'b1110011: case (funct3)
+                3'b000: decode_instr_name = ECALL_EBREAK;
                 default: decode_instr_name = UNKNOWN;
             endcase
 

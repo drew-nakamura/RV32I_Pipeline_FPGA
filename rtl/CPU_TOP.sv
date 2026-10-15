@@ -17,7 +17,8 @@
 //     .DATA_ADDRESS(),
 //     .DATA_OUT(),
 //     .IOBUS_RDEN(),
-//     .IOBUS_WE()
+//     .IOBUS_WE(),
+//     .halt_sig()
 //     );
 import CPU_pkg::*;
 
@@ -30,7 +31,8 @@ module CPU_TOP(
     output logic [31:0] DATA_ADDRESS,
     output logic [31:0] DATA_OUT,
     output logic IOBUS_RDEN,
-    output logic IOBUS_WE
+    output logic IOBUS_WE,
+    output logic halt_sig
     );
 
     //===Structs====
@@ -63,6 +65,7 @@ module CPU_TOP(
     logic [3:0] ALU_FUN;
     logic rs1_used;
     logic rs2_used;
+    logic system_call;
 
     //===Branch Cond Gen Wires===
     logic br_lt, br_eq, br_ltu;
@@ -83,6 +86,7 @@ module CPU_TOP(
     logic FORW_FLUSH_EX_MEM, FORW_STALL_ID_EX, FORW_STALL_IF_ID;
     logic Hazard_FLUSH_IF_ID, Hazard_FLUSH_ID_EX;
     logic [1:0] srcA_FORWARD_SEL, srcB_FORWARD_SEL;
+    logic freeze;
 
     //========== FETCH ===============================
     Program_Counter Program_Counter(
@@ -95,13 +99,16 @@ module CPU_TOP(
         .PC(PC)
     );
 
+    assign freeze = id_ex_q.trap || ex_mem_q.trap || mem_wb_q.trap || halt_sig;
+
     IMEM IMEM(
         .CLK(CLK),
         .PC(PC),
         .instruction(ir),
         .PC_USED(PC_USED),
         .STALL(FORW_STALL_IF_ID),
-        .FLUSH(Hazard_FLUSH_IF_ID)
+        .FLUSH(Hazard_FLUSH_IF_ID),
+        .freeze(freeze)
     );
     assign instruction = decode_instr_name(ir);
 
@@ -152,7 +159,8 @@ module CPU_TOP(
         .RF_SEL(RF_SEL),
         .ALU_FUN(ALU_FUN),
         .rs1_used(rs1_used),
-        .rs2_used(rs2_used)
+        .rs2_used(rs2_used),
+        .system_call(system_call)
     );
 
     Immediate_Generator Immediate_Generator(
@@ -192,6 +200,8 @@ module CPU_TOP(
         id_ex_d.rs1_used = rs1_used;
         id_ex_d.rs2_used = rs2_used;
         id_ex_d.instruction = if_id_q.instruction;
+        id_ex_d.trap = system_call;
+        id_ex_d.ebrak = (if_id_q.ir[14:12] == 3'b000) && (if_id_q.ir[14:12] == 3'b001);
     end
 
     always_ff @(posedge CLK) begin
@@ -224,13 +234,11 @@ module CPU_TOP(
             id_ex_q.rs1_used <= id_ex_q.rs1_used;
             id_ex_q.rs2_used <= id_ex_q.rs2_used;
             id_ex_q.instruction <= id_ex_q.instruction;
-
+            id_ex_q.trap <= id_ex_q.trap;
+            id_ex_q.ebrak <= id_ex_q.ebrak;
             // Stall + WB forward: capture the forwarded rs values into ID/EX
             id_ex_q.rs1 <= real_rs1;
             id_ex_q.rs2 <= real_rs2;
-        end
-        else if (FORW_STALL_ID_EX) begin
-            id_ex_q <= '0;
         end
         else begin
             id_ex_q <= id_ex_d;
@@ -238,6 +246,8 @@ module CPU_TOP(
     end
 
 //=========EX STAGE ========================
+
+    
     Branch_Condition_Generator Branch_Condition_Generator(
         .rs1(real_rs1),
         .rs2(real_rs2),
@@ -322,6 +332,8 @@ module CPU_TOP(
         ex_mem_d.memRDEN = id_ex_q.memRDEN;
         ex_mem_d.memWE = id_ex_q.memWE;
         ex_mem_d.DATA_IN = DATA_IN;
+        ex_mem_d.trap = id_ex_q.trap;
+        ex_mem_d.ebrak = id_ex_q.ebrak;
         mem_data = {id_ex_q.mem_size, id_ex_q.mem_sign};
         DATA_ADDRESS = ALU_result;
         DATA_OUT = real_rs2;
@@ -348,11 +360,16 @@ module CPU_TOP(
         mem_wb_d.reg_write_addr = ex_mem_q.reg_write_addr;
         mem_wb_d.instruction = ex_mem_q.instruction;
         mem_wb_d.REG_write_data = write_data;
+        mem_wb_d.trap = ex_mem_q.trap;
+        mem_wb_d.ebrak = ex_mem_q.ebrak;
     end
 
     always_ff @(posedge CLK) begin
         if (RST) begin
             mem_wb_q <= '0;
+        end
+        else if(halt_sig || mem_wb_q.trap) begin//Until we have sometihng to stop trap, its forveer or until reset
+            halt_sig <= 1'b1;
         end
         else begin
             mem_wb_q <= mem_wb_d;
@@ -394,6 +411,7 @@ module CPU_TOP(
         .jal_i(id_ex_q.jal_i),
         .jalr_i(id_ex_q.jalr_i),
         .PC_SEL(PC_SEL),
+        .trap(id_ex_q.trap),
         .IF_ID_Stall(FORW_STALL_IF_ID),
         .Hazard_FLUSH_IF_ID(Hazard_FLUSH_IF_ID),
         .Hazard_FLUSH_ID_EX(Hazard_FLUSH_ID_EX)

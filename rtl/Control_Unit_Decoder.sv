@@ -23,7 +23,8 @@
 //     .RF_SEL(),
 //     .ALU_FUN(),
 //     .rs1_used(),
-//     .rs2_used()
+//     .rs2_used(),
+//     .system_call()
 // );
 
 module Control_Unit_Decoder(
@@ -33,7 +34,8 @@ module Control_Unit_Decoder(
     output logic srcA_SEL, RF_WE, memWE, memRDEN, branch_i, jal_i, jalr_i,
     output logic [1:0] srcB_SEL, RF_SEL,
     output logic [3:0] ALU_FUN,
-    output logic rs1_used, rs2_used
+    output logic rs1_used, rs2_used, 
+    output logic system_call
     );
 
     import CPU_pkg::*;
@@ -52,7 +54,12 @@ module Control_Unit_Decoder(
         jalr_i = 1'b0;
         rs1_used = 1'b0;
         rs2_used = 1'b0;
+        system_call = 1'b0;
         case(opcode)
+        7'b0001111://==Fence Instruction====================
+        begin
+            //defualt is do nothing
+        end
         7'b0110111://==U-Type -> LUI====================
         begin
             ALU_FUN = alu_LUI_COPY;
@@ -156,7 +163,12 @@ module Control_Unit_Decoder(
             rs1_used = 1'b1;
             rs2_used = 1'b1;
         end
-        default: begin
+
+        7'b1110011: // ECALL and EBREAK instructions
+        begin
+            if(func3 == 3'b000) system_call = 1'b1;
+        end
+        default: begin//IF no recognzied opode, soemthing wrong
                 ALU_FUN = 'X;
                 srcA_SEL =  'X;
                 srcB_SEL = 'X;

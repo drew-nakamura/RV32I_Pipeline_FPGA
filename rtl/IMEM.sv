@@ -26,6 +26,7 @@ module IMEM #(
     input logic [31:0] PC,
     input logic STALL,
     input logic FLUSH,
+    input logic freeze,
     output logic [31:0] instruction,
     output logic [31:0] PC_USED
     );
@@ -49,6 +50,10 @@ module IMEM #(
         end
         else if(STALL) begin
             instruction <= instruction;
+            PC_USED <= PC_USED;
+        end
+        else if(freeze) begin
+            instruction <= 32'b0;
             PC_USED <= PC_USED;
         end
         else begin
