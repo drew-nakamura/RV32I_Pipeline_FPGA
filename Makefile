@@ -1,16 +1,15 @@
 # Cadence only. From the project root on nanoHUB:
-#   make        batch run, writes CPU_TOP_tb.log
+#   make        batch run, writes riscv_test_CPU_TOP_tb.log
 #   make gui    same run with SimVision
 #
-# Pass for the add test is this line in the log:
-#   tohost store = 0x00000001
-# SELFTEST FAIL is the old x30 check. add does not write x30.
+# Pass is this line in the log:
+#   RISCV-TEST PASS
 
 ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 IMEM ?= riscv-tests/build/imem.mem
 DMEM ?= riscv-tests/build/dmem.mem
-LOG  ?= CPU_TOP_tb.log
+LOG  ?= riscv_test_CPU_TOP_tb.log
 
 RTL := \
 	rtl/CPU_pkg.sv \
@@ -31,12 +30,12 @@ RTL := \
 	rtl/DMEM.sv \
 	rtl/Interconnect.sv
 
-TB := my-tests/tb/CPU_TOP_tb.sv
+TB := my-tests/tb/riscv_test_CPU_TOP_tb.sv
 
 XRUN := xrun -64bit -sv -timescale 1ns/1ps -access +rwc -l $(LOG) \
-	-top CPU_TOP_tb \
-	-defparam CPU_TOP_tb.dut.IMEM.MEM_FILE=\"$(IMEM)\" \
-	-defparam CPU_TOP_tb.data_memory.MEM_FILE=\"$(DMEM)\" \
+	-top riscv_test_CPU_TOP_tb \
+	-defparam riscv_test_CPU_TOP_tb.dut.IMEM.MEM_FILE=\"$(IMEM)\" \
+	-defparam riscv_test_CPU_TOP_tb.data_memory.MEM_FILE=\"$(DMEM)\" \
 	$(RTL) $(TB)
 
 .PHONY: sim gui clean
