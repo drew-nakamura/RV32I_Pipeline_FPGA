@@ -132,7 +132,7 @@ module CPU_TOP_tb;
 
     // Addresses >= 0x3F60 reach DMEM. Below that, the data bus does nothing.
     // Switches and buttons are tied off; these programs do not read them.
-    Interconnect interconnect (
+    Interconnect io_bus (
         .address   (DATA_ADDRESS),
         .WE        (IOBUS_WE),
         .RDEN      (IOBUS_RDEN),
