@@ -4,6 +4,7 @@
 *
 !.gitignore
 !README.md
+!Makefile
 
 !rtl/
 !rtl/**
@@ -16,8 +17,10 @@
 
 !riscv-tests/
 !riscv-tests/**
-# Images from riscv-tests/Makefile. Rebuild with make.
-riscv-tests/build/
+# Generated images. Keep the add images so a git checkout can simulate.
+riscv-tests/build/*
+!riscv-tests/build/imem.mem
+!riscv-tests/build/dmem.mem
 
 !tb/
 !tb/AGENTS.md
