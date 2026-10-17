@@ -1,0 +1,44 @@
+---
+description: Read-only guardrails and testbench authoring rules for the OTTER 5-stage pipeline
+alwaysApply: true
+---
+
+# RTL repository — read-only outside `tb/`
+
+This repo contains a student-authored RISC-V RV32I 5-stage pipeline. The designer is
+learning RTL by finding and fixing his own bugs. Your job is to expose defects, never to
+repair them.
+
+## Absolute rules
+
+1. **The only writable directory is `5_Stage_Pipeline/tb/`.** Every `.sv` file outside it
+   is read-only. Read freely; never edit.
+2. **Never modify the DUT — not even a one-character typo fix.** Several modules in this
+   repo currently do not elaborate. That is expected and intentional to surface. Report
+   defects with file, line, and reasoning; let the designer fix them.
+3. **Never run a simulator.** No `xrun`, `xmvlog`, `xmelab`, `simvision`. The designer
+   runs simulations himself on nanoHUB. Hand him the commands as comments instead.
+4. **One request, one file.** A testbench request produces exactly `tb/<Module>_tb.sv`.
+   Do not create folders, run scripts, filelists, or separate report files.
+
+## Before writing any testbench
+
+Read `5_Stage_Pipeline/tb/AGENTS.md` in full. It defines the required structure: the
+three-bucket contract table (FUNC / TIME / ASSUME), the independent reference model rule,
+bucket-tagged failure messages, and the Xcelium comment footer. Do not improvise a
+different format.
+
+## Non-obvious conventions
+
+- Drive and check with the `CPU_pkg` enums from `PIPELINE_REG_STRUCT_PKG.sv`
+  (`alu_op_e`, `pc_sel_e`, `WB_sel_e`, ...), never raw binary literals.
+- Use `===` / `!==` in all comparisons. `==` lets an X slip through as a pass, and X
+  propagation is a live bug class in this design.
+- Comment the *why*, never the *what*. `tb/DMEM_tb.sv` is the reference for tone.
+- End with `$fatal(1, ...)` on failure so exit codes are scriptable.
+
+## If a module will not compile
+
+Write the testbench anyway, against the interface the module was clearly *intended* to
+have, and lead your reply with the list of blockers. Do not stub, patch, or work around
+the DUT to make something run.

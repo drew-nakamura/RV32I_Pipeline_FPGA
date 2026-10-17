@@ -1,0 +1,50 @@
+
+build/jal.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text.init:
+
+00000000 <_start>:
+   0:	00200193          	li	gp,2
+   4:	00000093          	li	ra,0
+   8:	0100026f          	jal	tp,18 <target_2>
+
+0000000c <linkaddr_2>:
+   c:	00000013          	nop
+  10:	00000013          	nop
+  14:	0400006f          	j	54 <fail>
+
+00000018 <target_2>:
+  18:	00000117          	auipc	sp,0x0
+  1c:	ff410113          	addi	sp,sp,-12 # c <linkaddr_2>
+  20:	02411a63          	bne	sp,tp,54 <fail>
+
+00000024 <test_3>:
+  24:	00300193          	li	gp,3
+  28:	00100093          	li	ra,1
+  2c:	0140006f          	j	40 <test_3+0x1c>
+  30:	00108093          	addi	ra,ra,1
+  34:	00108093          	addi	ra,ra,1
+  38:	00108093          	addi	ra,ra,1
+  3c:	00108093          	addi	ra,ra,1
+  40:	00108093          	addi	ra,ra,1
+  44:	00108093          	addi	ra,ra,1
+  48:	00300393          	li	t2,3
+  4c:	00709463          	bne	ra,t2,54 <fail>
+  50:	00301e63          	bne	zero,gp,6c <pass>
+
+00000054 <fail>:
+  54:	00119193          	slli	gp,gp,0x1
+  58:	0011e193          	ori	gp,gp,1
+  5c:	00004f17          	auipc	t5,0x4
+  60:	f24f0f13          	addi	t5,t5,-220 # 3f80 <tohost>
+  64:	003f2023          	sw	gp,0(t5)
+  68:	0000006f          	j	68 <fail+0x14>
+
+0000006c <pass>:
+  6c:	00100193          	li	gp,1
+  70:	00004f17          	auipc	t5,0x4
+  74:	f10f0f13          	addi	t5,t5,-240 # 3f80 <tohost>
+  78:	003f2023          	sw	gp,0(t5)
+  7c:	0000006f          	j	7c <pass+0x10>
+  80:	c0001073          	unimp

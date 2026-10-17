@@ -13,14 +13,11 @@
 //
 // Module names cannot contain '-'. The file name is the readable form of
 // riscv-test-CPU_TOP.
+//
+// The makefile passes each test's hex file with xrun -defparam.
+// A defparam in this file overrides that switch on Xcelium, so there is
+// none here. Without the switch, IMEM and DMEM open their own defaults.
 //============================================================================
-
-`ifndef IMEM_MEM_FILE
-  `define IMEM_MEM_FILE "riscv-tests/build/imem.mem"
-`endif
-`ifndef DMEM_MEM_FILE
-  `define DMEM_MEM_FILE "riscv-tests/build/dmem.mem"
-`endif
 
 module riscv_test_CPU_TOP_tb;
 
@@ -60,8 +57,6 @@ module riscv_test_CPU_TOP_tb;
         .halt_sig     (halt_sig)
     );
 
-    defparam dut.IMEM.MEM_FILE = `IMEM_MEM_FILE;
-
     // Addresses >= 0x3F60 reach DMEM. Switches and buttons are unused.
     Interconnect io_bus (
         .address   (DATA_ADDRESS),
@@ -86,8 +81,6 @@ module riscv_test_CPU_TOP_tb;
         .mem_data (mem_data),
         .data_out (DMEM_DATA)
     );
-
-    defparam data_memory.MEM_FILE = `DMEM_MEM_FILE;
 
     initial CLK = 1'b0;
     always #(CLK_PERIOD/2) CLK = ~CLK;

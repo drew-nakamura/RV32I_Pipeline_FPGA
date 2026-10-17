@@ -5,6 +5,11 @@
 #
 # The last line is the score, for example "2/2 tests passed".
 # A passing test prints "RISCV-TEST PASS" in logs/<name>.log.
+#
+# -defparam selects that test's hex files. The testbench must not defparam
+# the same parameters: on this Xcelium the source assignment wins, and every
+# test then opens riscv-tests/build/imem.mem.
+# -nowarn DLPTH hides the site cds.lib "invalid path / command ignored" lines.
 
 ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
@@ -40,7 +45,7 @@ sim:
 	for t in $$list; do \
 		total=$$((total + 1)); \
 		echo "===== $$t ====="; \
-		cd $(ROOT) && xrun -64bit -sv -timescale 1ns/1ps -access +rwc \
+		cd $(ROOT) && xrun -64bit -sv -timescale 1ns/1ps -access +rwc -nowarn DLPTH \
 			-top riscv_test_CPU_TOP_tb \
 			-l logs/$$t.log \
 			-defparam riscv_test_CPU_TOP_tb.dut.IMEM.MEM_FILE=\"riscv-tests/build/$$t.imem.mem\" \
@@ -58,7 +63,7 @@ sim:
 
 gui:
 	@test -n "$(TEST)" || (echo "usage: make gui TEST=addi" && exit 1)
-	cd $(ROOT) && xrun -64bit -sv -timescale 1ns/1ps -access +rwc -gui \
+	cd $(ROOT) && xrun -64bit -sv -timescale 1ns/1ps -access +rwc -gui -nowarn DLPTH \
 		-top riscv_test_CPU_TOP_tb \
 		-l logs/$(TEST).log \
 		-defparam riscv_test_CPU_TOP_tb.dut.IMEM.MEM_FILE=\"riscv-tests/build/$(TEST).imem.mem\" \
