@@ -17,10 +17,10 @@
 
 !riscv-tests/
 !riscv-tests/**
-# Generated images. Keep the add images so a git checkout can simulate.
+# Generated objects. Keep the per-test hex images so nanoHUB can simulate.
 riscv-tests/build/*
-!riscv-tests/build/imem.mem
-!riscv-tests/build/dmem.mem
+!riscv-tests/build/*.imem.mem
+!riscv-tests/build/*.dmem.mem
 
 !tb/
 !tb/AGENTS.md
