@@ -20,7 +20,7 @@ RTL := \
 	rtl/Branch_Condition_Generator.sv \
 	rtl/Program_Counter.sv \
 	rtl/IMEM.sv \
-	rtl/REG_FILE.sv \
+	rtl/Reg_File.sv \
 	rtl/Control_Unit_Decoder.sv \
 	rtl/Immediate_Generator.sv \
 	rtl/PC_Decoder.sv \
