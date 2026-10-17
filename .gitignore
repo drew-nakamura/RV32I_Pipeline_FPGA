@@ -1,5 +1,5 @@
-# Whitelist only: rtl/, docs/, README, AGENTS.md,
-# rv32i_selftest, imem.mem, and the Makefile.
+# Whitelist: RTL, docs, the vendored riscv-tests, and my-tests.
+# Everything else stays ignored.
 
 *
 !.gitignore
@@ -10,6 +10,14 @@
 
 !docs/
 !docs/**
+
+!my-tests/
+!my-tests/**
+
+!riscv-tests/
+!riscv-tests/**
+# Images from riscv-tests/Makefile. Rebuild with make.
+riscv-tests/build/
 
 !tb/
 !tb/AGENTS.md
