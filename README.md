@@ -4,6 +4,8 @@ A 5-stage pipelined RV32I processor that runs on a Basys 3. It implements 37 of 
 
 The CPU clock is 50 MHz, divided down from the board’s 100 MHz oscillator. Instruction memory and data memory are both synchronous: every read and every write happens on the clock edge, and the pipeline inserts no extra wait states for memory.
 
+> **Note on AI Usage:** AI is used strictly as a tool for verification guidance and testbench infrastructure; it has written no RTL in this repository.
+
 ## What it does
 
 - **ISA:** 37 of 40 RV32I instructions. The three left out are `FENCE`, `ECALL`, and `EBREAK`.
