@@ -50,6 +50,7 @@ module MCU_WRAPPER(
     );
 
    Interconnect Interconnect(
+        .CLK(clk_50),
         .address(IOBUS_addr),
         .WE(IOBUS_WE),
         .RDEN(IOBUS_RDEN),

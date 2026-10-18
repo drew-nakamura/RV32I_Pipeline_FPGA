@@ -339,7 +339,7 @@ module CPU_TOP(
         DATA_OUT = real_rs2;
 
         IOBUS_RDEN = id_ex_q.memRDEN;
-        IOBUS_WE = id_ex_q.memWE;
+        IOBUS_WE = (id_ex_q.memWE && !FORW_FLUSH_EX_MEM);
         ex_mem_d.instruction = id_ex_q.instruction;
     end
 
@@ -381,7 +381,7 @@ module CPU_TOP(
     FOUR_TO_ONE_MUX reg_MUX(
         .A(ex_mem_q.PC + 4),
         .B('X),
-        .C(ex_mem_q.DATA_IN), // load data from MEM
+        .C(DATA_IN), // load data from MEM
         .D(ex_mem_q.ALU_result),
         .SEL(ex_mem_q.RF_SEL),
         .OUT(write_data)

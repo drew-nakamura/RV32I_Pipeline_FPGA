@@ -22,7 +22,7 @@
 //     .data_out()
 // );
 module DMEM #(
-    parameter string MEM_FILE = "Test_All_dmem.mem"
+    parameter string MEM_FILE = "MapGameData.mem"
     )
     (
     input logic CLK,
