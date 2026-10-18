@@ -15,7 +15,7 @@ CPU_RTL := \
 	$(ROOT)/rtl/Branch_Condition_Generator.sv \
 	$(ROOT)/rtl/Program_Counter.sv \
 	$(ROOT)/rtl/IMEM.sv \
-	$(ROOT)/rtl/REG_FILE.sv \
+	$(ROOT)/rtl/Reg_File.sv \
 	$(ROOT)/rtl/Control_Unit_Decoder.sv \
 	$(ROOT)/rtl/Immediate_Generator.sv \
 	$(ROOT)/rtl/PC_Decoder.sv \
