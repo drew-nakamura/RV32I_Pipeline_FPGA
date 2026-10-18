@@ -19,8 +19,6 @@
 //     .PC_SEL()
 // )
 
-import CPU_pkg::*;
-
 module PC_Decoder(
     input logic br_lt,
     input logic br_eq,
@@ -31,7 +29,9 @@ module PC_Decoder(
     input logic [2:0]func3,
     output logic [1:0] PC_SEL
     );
-    
+
+    import CPU_pkg::*;
+
     always_comb begin
         unique case({branch_i, jal_i, jalr_i})
             3'b000: PC_SEL = pc_PC4;

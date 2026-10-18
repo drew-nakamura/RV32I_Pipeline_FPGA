@@ -20,8 +20,6 @@
 //     .IOBUS_WE(),
 //     .halt_sig()
 //     );
-import CPU_pkg::*;
-
 
 module CPU_TOP(
     input logic RST,
@@ -35,6 +33,8 @@ module CPU_TOP(
     output logic halt_sig
     );
 
+    import CPU_pkg::*;
+
     //===Structs====
     if_id_t if_id_d;
     if_id_t if_id_q;
@@ -44,6 +44,15 @@ module CPU_TOP(
     ex_mem_t ex_mem_q;
     mem_wb_t mem_wb_d;
     mem_wb_t mem_wb_q;
+    // These fields stay in the pipeline flops. Nothing in this module reads them.
+    wire unused_pipe_fields = &{1'b0,
+                                ex_mem_q.memWE,
+                                ex_mem_q.mem_sign,
+                                ex_mem_q.mem_size,
+                                ex_mem_q.DATA_IN,
+                                mem_wb_q.ebrak,
+                                mem_wb_q.instruction,
+                                1'b0};
 
     //====ENUMS=====
     instr_name_e instruction;

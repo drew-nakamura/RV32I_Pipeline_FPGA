@@ -134,9 +134,12 @@ typedef struct packed {
 
     //======Functions======
     function automatic instr_name_e decode_instr_name(input logic [31:0] ir);
+        // rd / rs1 / rs2 are not part of the name. Read them so the bits are not "unused".
+        logic unused_ir_fields;
         logic [6:0] opcode = ir[6:0];
         logic [2:0] funct3 = ir[14:12];
         logic [6:0] funct7 = ir[31:25];
+        unused_ir_fields = |{ir[24:15], ir[11:7]};
 
         case (opcode)
             7'b0001111: decode_instr_name = FENCE;

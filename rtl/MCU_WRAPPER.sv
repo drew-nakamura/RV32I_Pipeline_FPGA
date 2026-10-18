@@ -20,11 +20,8 @@ module MCU_WRAPPER(
    output logic [3:0] ANODES
    );
     logic clk_50; //50 MHz clock
-    // INPUT PORT IDS BASED ON MMIO//////////////////////////////////////////////
-    localparam SWITCHES_AD = 32'h11000000;
-    localparam LEDS_AD    = 32'h11000020; //32'h11000020
-    localparam SSEG_AD    = 32'h11000040; //32'h11000040
-    localparam BUTTON_AD  = 32'h11000080; //32'h11000080
+    // MMIO map lives in Interconnect: switches 11000000, LEDs 11000020,
+    // seven-seg 11000040, buttons 11000080.
     //=====MEMORY WIRES / CPU Wires=====
     logic [2:0] mem_data;
     logic [31:0] IOBUS_out, IOBUS_in, IOBUS_addr;
@@ -37,6 +34,8 @@ module MCU_WRAPPER(
     logic [31:0] DMEM_DATA;
     //====BOARD WIRES=====
     logic SSEG_WE, LEDS_WE;
+    // CPU drives this. The board wrapper does not use it.
+    logic unused_halt_sig;
 
    CPU_TOP CPU_TOP(
         .RST(s_reset),
@@ -46,7 +45,8 @@ module MCU_WRAPPER(
         .DATA_ADDRESS(IOBUS_addr),
         .DATA_OUT(IOBUS_out),
         .IOBUS_RDEN(IOBUS_RDEN),
-        .IOBUS_WE(IOBUS_WE)
+        .IOBUS_WE(IOBUS_WE),
+        .halt_sig(unused_halt_sig)
     );
 
    Interconnect Interconnect(
