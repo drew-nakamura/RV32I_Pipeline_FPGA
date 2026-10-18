@@ -38,13 +38,32 @@ Instruction memory is inside the CPU and is read by the program counter. Address
 
 Loads and stores are byte, halfword, or word. Loads are sign-extended or zero-extended from the registered word.
 
+## Verification & Testing (`riscv-tests`)
+
+**Status (as of 10/17/2026):** **27 / 37** `riscv-tests` instructions passing.
+
+I am currently testing the 37 implemented RV32I instructions against the official `riscv-tests` (`rv32ui`) repository using Cadence Xcelium (`xrun`) and the core testbench (`my-tests/tb/riscv_test_CPU_TOP_tb.sv`). 
+
+Each test is compiled bare-metal and split into separate instruction (`imem.mem` at `0x0000_0000`) and data (`dmem.mem` starting at `0x0000_3F60`) memory images to match the processor's Harvard architecture. The testbench monitors stores to the `tohost` mailbox address (`0x0000_3F80`), where writing `1` indicates a pass and `(test_case << 1) | 1` indicates the failing test case number.
+
+What makes the remaining failures especially interesting is that the CPU already passes all of my custom self-tests, large programs, and the full test suites provided in my classes. I have not yet completely verified the root cause of the 10 failing `riscv-tests` programs—it may be due to continued memory/section alignment issues when splitting the `riscv-tests` binaries into separate IMEM and DMEM images, or corner-case pipeline interactions exposed by the suite's macros. More testing and debugging are underway.
+
+### Running the test suite (Cadence Xcelium)
+
+```bash
+make -C riscv-tests        # build .imem.mem and .dmem.mem images for all 37 tests
+make                       # run all 37 tests in Xcelium xrun and print the score
+make TEST=addi             # run a single instruction test
+make gui TEST=addi         # open a single test in SimVision
+```
+
 ## Layout
 
 | Path | Contents |
 | --- | --- |
 | `rtl/` | CPU, memories, forwarding, hazard unit, and the Basys 3 wrapper |
-| `sw/` | Program image and a Verilator lint makefile |
-| `tb/` | Module testbenches |
+| `riscv-tests/` | Official RV32I (`rv32ui`) test suite adapted for split IMEM/DMEM |
+| `my-tests/` | Core/module testbenches (`tb/`) and custom software tests (`sw/`) |
 | `docs/` | Diagrams |
 
 `MCU_WRAPPER` is the FPGA top. It divides the board clock to 50 MHz, holds the CPU, data memory, the I/O interconnect, and the display.
