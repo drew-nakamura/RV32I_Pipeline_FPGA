@@ -38,6 +38,9 @@ TB := my-tests/tb/riscv_test_CPU_TOP_tb.sv
 
 .PHONY: sim gui clean
 
+# Xcelium on nanoHUB keeps the source defaults (imem.mem / dmem.mem) and
+# ignores -defparam on these string parameters. Copy the test images to
+# those names in the xrun cwd instead.
 sim:
 	@mkdir -p $(ROOT)/logs
 	@pass=0; total=0; \
@@ -45,11 +48,18 @@ sim:
 	for t in $$list; do \
 		total=$$((total + 1)); \
 		echo "===== $$t ====="; \
+		imem="$(ROOT)/riscv-tests/build/$$t.imem.mem"; \
+		dmem="$(ROOT)/riscv-tests/build/$$t.dmem.mem"; \
+		if [ ! -f "$$imem" ] || [ ! -f "$$dmem" ]; then \
+			echo "missing $$imem or $$dmem"; \
+			echo "build it first:  make -C riscv-tests $$t"; \
+			exit 1; \
+		fi; \
+		cp "$$imem" "$(ROOT)/imem.mem"; \
+		cp "$$dmem" "$(ROOT)/dmem.mem"; \
 		cd $(ROOT) && xrun -64bit -sv -timescale 1ns/1ps -access +rwc -nowarn DLPTH \
 			-top riscv_test_CPU_TOP_tb \
 			-l logs/$$t.log \
-			-defparam riscv_test_CPU_TOP_tb.dut.IMEM.MEM_FILE=\"riscv-tests/build/$$t.imem.mem\" \
-			-defparam riscv_test_CPU_TOP_tb.data_memory.MEM_FILE=\"riscv-tests/build/$$t.dmem.mem\" \
 			$(RTL) $(TB); \
 		if grep -q "RISCV-TEST PASS" $(ROOT)/logs/$$t.log; then \
 			echo "$$t PASS"; \
@@ -63,11 +73,18 @@ sim:
 
 gui:
 	@test -n "$(TEST)" || (echo "usage: make gui TEST=addi" && exit 1)
+	@imem="$(ROOT)/riscv-tests/build/$(TEST).imem.mem"; \
+	dmem="$(ROOT)/riscv-tests/build/$(TEST).dmem.mem"; \
+	if [ ! -f "$$imem" ] || [ ! -f "$$dmem" ]; then \
+		echo "missing $$imem or $$dmem"; \
+		echo "build it first:  make -C riscv-tests $(TEST)"; \
+		exit 1; \
+	fi; \
+	cp "$$imem" "$(ROOT)/imem.mem"; \
+	cp "$$dmem" "$(ROOT)/dmem.mem"; \
 	cd $(ROOT) && xrun -64bit -sv -timescale 1ns/1ps -access +rwc -gui -nowarn DLPTH \
 		-top riscv_test_CPU_TOP_tb \
 		-l logs/$(TEST).log \
-		-defparam riscv_test_CPU_TOP_tb.dut.IMEM.MEM_FILE=\"riscv-tests/build/$(TEST).imem.mem\" \
-		-defparam riscv_test_CPU_TOP_tb.data_memory.MEM_FILE=\"riscv-tests/build/$(TEST).dmem.mem\" \
 		$(RTL) $(TB)
 
 clean:

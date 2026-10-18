@@ -58,7 +58,9 @@ module riscv_test_CPU_TOP_tb;
     );
 
     // Addresses >= 0x3F60 reach DMEM. Switches and buttons are unused.
+    // CLK is required: IOBUS_in is registered, so a dangling clock leaves loads at 0.
     Interconnect io_bus (
+        .CLK       (CLK),
         .address   (DATA_ADDRESS),
         .WE        (IOBUS_WE),
         .RDEN      (IOBUS_RDEN),
