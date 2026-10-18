@@ -19,7 +19,7 @@
 //     );
 
 module IMEM #(
-    parameter string MEM_FILE = "MapGameText.mem"
+    parameter string MEM_FILE = "imem.mem"
     )
     (
     input logic CLK,
