@@ -46,16 +46,11 @@ module Interconnect(
     read_region_e region_q;
     logic [31:0] mmio_q;
 
-    initial begin
-        region_q = READ_NONE;
-        mmio_q   = '0;
-    end
 
     // IOBUS_in is also assigned from the registered read region below.
     // Both writes stay; this only stops the lint from treating that as new work.
     /* verilator lint_off MULTIDRIVEN */
     always_comb begin
-        IOBUS_in = 32'b0;
         DMEM_RDEN = 1'b0;
         DMEM_WE = 1'b0;
         LEDS_WE = 1'b0;
@@ -90,6 +85,7 @@ module Interconnect(
                 case(address)
                     32'h11000020: mmio_q <= BUTTONS;
                     32'h11000040: mmio_q <= SWITCHES;
+                    default: mmio_q <= 32'b0;
                 endcase
             end else if (address >= 32'h3F60) begin
                 region_q <= READ_DMEM;
