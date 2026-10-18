@@ -133,7 +133,7 @@ module CPU_TOP(
     //========== DECODE ===============================
     
     // x0 is 0; every other register starts as junk
-    REG_FILE REG_FILE(
+    Reg_File REG_FILE(
         .CLK(CLK),
         .en(ex_mem_q.RF_WE),      
         .adr1(if_id_q.ir[19:15]),   

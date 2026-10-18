@@ -18,7 +18,7 @@
 //    .rs2()
 //    );
 
-module REG_FILE(
+module Reg_File(
     input logic CLK, en,
     input logic [4:0] adr1, adr2, w_adr,
     input logic [31:0] w_data,

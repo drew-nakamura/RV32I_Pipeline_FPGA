@@ -103,7 +103,6 @@ module Interconnect(
     always_comb begin
         case (region_q)
             READ_DMEM: IOBUS_in = DMEM_DATA;
-            READ_VRAM: IOBUS_in = VRAM_DATA;
             READ_MMIO: IOBUS_in = mmio_q;
             default:   IOBUS_in = 32'b0;
         endcase
